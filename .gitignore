@@ -105,6 +105,7 @@ secret/
 # ---------------------------------------------------------------------------
 *.md
 !/README.md
+!/README.zh-CN.md
 tcmseek-ai-service/docs/
 tcmseek-gateway/docs/
 tcmseek-web-server/tcmseek-admin/docs/
