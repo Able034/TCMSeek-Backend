@@ -1,0 +1,78 @@
+{
+  "moduleId": 310,
+  "moduleName": "3DSTarPred (Target Prediction)",
+  "docUrl": "https://3dstarpred.pumc.wecomput.com/ui/doc/#/tutorial/en/%2FTarget%20Prediction%20(3DSTarPred)",
+  "description": "3DSTarPred performs shape/pharmacophore similarity screening on small molecules and searches ChEMBL29 or PDB for potential targets.",
+  "tags": [
+    "target prediction",
+    "small molecule",
+    "pharmacophore"
+  ],
+  "lastUpdated": "2025-11-25",
+  "inputSections": [
+    {
+      "title": "Basic Parameters",
+      "fields": [
+        {
+          "key": "sdfFile",
+          "label": "SDF File",
+          "type": "file",
+          "required": true,
+          "description": "Upload the small-molecule structure in SDF format."
+        },
+        {
+          "key": "referenceDatabase",
+          "label": "Reference Database",
+          "type": "radio",
+          "required": true,
+          "options": [
+            { "label": "pdb", "value": "pdb" },
+            { "label": "chembl29", "value": "chembl29" }
+          ],
+          "defaultValue": "chembl29",
+          "description": "Choose the target reference database: pdb uses PDB, chembl29 uses ChEMBL29."
+        },
+        {
+          "key": "queryConformations",
+          "label": "Query Conformations",
+          "type": "number",
+          "required": true,
+          "defaultValue": 16,
+          "description": "Number of conformers generated for each molecule."
+        },
+        {
+          "key": "similarityThreshold",
+          "label": "Similarity Threshold",
+          "type": "number",
+          "required": true,
+          "defaultValue": 0.5,
+          "description": "Similarity cutoff, range 0–1."
+        },
+        {
+          "key": "activityThreshold",
+          "label": "Activity Threshold",
+          "type": "number",
+          "required": true,
+          "defaultValue": 10000,
+          "description": "Activity cutoff in nM, range 0–100000."
+        },
+        {
+          "key": "ranking",
+          "label": "Ranking",
+          "type": "radio",
+          "required": true,
+          "options": [
+            { "label": "similarity", "value": "similarity" },
+            { "label": "overall", "value": "overall" }
+          ],
+          "defaultValue": "similarity",
+          "description": "Sorting method: similarity (by similarity score) or overall (similarity × activity)."
+        }
+      ]
+    }
+  ],
+  "outputHints": [
+    "Downloaded results include predicted_target.csv (target summary), detail.csv (similarity details), and overlay SDF files.",
+    "The UI previews the first 200 rows from predicted_target.csv, showing mol_id, pref_name, similarity, overall, etc."
+  ]
+}

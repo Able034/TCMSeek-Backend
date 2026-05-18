@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.PhenotypesMapper">
+    
+    <resultMap type="Phenotypes" id="PhenotypesResult">
+        <result property="id"    column="id"    />
+        <result property="phenotypeId"    column="phenotype_id"    />
+        <result property="phenotypeName"    column="phenotype_name"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectPhenotypesVo">
+        select id, phenotype_id, phenotype_name, source, created_at, updated_at from phenotypes
+    </sql>
+
+    <select id="selectPhenotypesList" parameterType="Phenotypes" resultMap="PhenotypesResult">
+        <include refid="selectPhenotypesVo"/>
+        <where>  
+            <if test="phenotypeId != null  and phenotypeId != ''"> and phenotype_id = #{phenotypeId}</if>
+            <if test="phenotypeName != null  and phenotypeName != ''"> and phenotype_name like concat('%', #{phenotypeName}, '%')</if>
+            <if test="source != null  and source != ''"> and source = #{source}</if>
+        </where>
+    </select>
+    
+    <select id="selectPhenotypesById" parameterType="Long" resultMap="PhenotypesResult">
+        <include refid="selectPhenotypesVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertPhenotypes" parameterType="Phenotypes" useGeneratedKeys="true" keyProperty="id">
+        insert into phenotypes
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="phenotypeId != null and phenotypeId != ''">phenotype_id,</if>
+            <if test="phenotypeName != null and phenotypeName != ''">phenotype_name,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="phenotypeId != null and phenotypeId != ''">#{phenotypeId},</if>
+            <if test="phenotypeName != null and phenotypeName != ''">#{phenotypeName},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updatePhenotypes" parameterType="Phenotypes">
+        update phenotypes
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="phenotypeId != null and phenotypeId != ''">phenotype_id = #{phenotypeId},</if>
+            <if test="phenotypeName != null and phenotypeName != ''">phenotype_name = #{phenotypeName},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deletePhenotypesById" parameterType="Long">
+        delete from phenotypes where id = #{id}
+    </delete>
+
+    <delete id="deletePhenotypesByIds" parameterType="String">
+        delete from phenotypes where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

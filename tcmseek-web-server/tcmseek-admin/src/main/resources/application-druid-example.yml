@@ -1,0 +1,64 @@
+# Copy this file to application-druid.yml for local development.
+# Do not commit application-druid.yml because it contains real database credentials.
+
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      master:
+        driverClassName: com.mysql.cj.jdbc.Driver
+        url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/tcmseek?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8}
+        username: ${MYSQL_USERNAME:root}
+        password: ${MYSQL_PASSWORD:}
+        validationQuery: SELECT 1
+
+      rdkit:
+        driverClassName: org.postgresql.Driver
+        url: ${RDKIT_POSTGRES_URL:jdbc:postgresql://127.0.0.1:5432/postgres?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8}
+        username: ${RDKIT_POSTGRES_USERNAME:postgres}
+        password: ${RDKIT_POSTGRES_PASSWORD:}
+        validationQuery: SELECT 1
+
+      neo4j:
+        driverClassName: org.neo4j.jdbc.Driver
+        url: ${NEO4J_JDBC_URL:jdbc:neo4j:bolt://127.0.0.1:7687}
+        username: ${NEO4J_JDBC_USERNAME:neo4j}
+        password: ${NEO4J_JDBC_PASSWORD:}
+        validationQuery: RETURN 1
+
+      slave:
+        enabled: false
+        url:
+        username:
+        password:
+
+      initialSize: 5
+      minIdle: 10
+      maxActive: 20
+      maxWait: 60000
+      connectTimeout: 30000
+      socketTimeout: 60000
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 300000
+      maxEvictableIdleTimeMillis: 900000
+      validationQuery: SELECT 1
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      webStatFilter:
+        enabled: true
+      statViewServlet:
+        enabled: true
+        allow:
+        url-pattern: /druid/*
+        login-username: ${DRUID_MONITOR_USERNAME:admin}
+        login-password: ${DRUID_MONITOR_PASSWORD:}
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 500
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true

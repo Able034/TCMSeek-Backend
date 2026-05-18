@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.HerbDiseaseRelMapper">
+    
+    <resultMap type="HerbDiseaseRel" id="HerbDiseaseRelResult">
+        <result property="id"    column="id"    />
+        <result property="tcmHerbId"    column="tcm_herb_id"    />
+        <result property="diseaseId"    column="disease_id"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectHerbDiseaseRelVo">
+        select id, tcm_herb_id, disease_id, created_at from herb_disease_rel
+    </sql>
+
+    <select id="selectHerbDiseaseRelList" parameterType="HerbDiseaseRel" resultMap="HerbDiseaseRelResult">
+        <include refid="selectHerbDiseaseRelVo"/>
+        <where>  
+            <if test="tcmHerbId != null  and tcmHerbId != ''"> and tcm_herb_id = #{tcmHerbId}</if>
+            <if test="diseaseId != null  and diseaseId != ''"> and disease_id = #{diseaseId}</if>
+        </where>
+    </select>
+    
+    <select id="selectHerbDiseaseRelById" parameterType="Long" resultMap="HerbDiseaseRelResult">
+        <include refid="selectHerbDiseaseRelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertHerbDiseaseRel" parameterType="HerbDiseaseRel" useGeneratedKeys="true" keyProperty="id">
+        insert into herb_disease_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">tcm_herb_id,</if>
+            <if test="diseaseId != null and diseaseId != ''">disease_id,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">#{tcmHerbId},</if>
+            <if test="diseaseId != null and diseaseId != ''">#{diseaseId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateHerbDiseaseRel" parameterType="HerbDiseaseRel">
+        update herb_disease_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">tcm_herb_id = #{tcmHerbId},</if>
+            <if test="diseaseId != null and diseaseId != ''">disease_id = #{diseaseId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteHerbDiseaseRelById" parameterType="Long">
+        delete from herb_disease_rel where id = #{id}
+    </delete>
+
+    <delete id="deleteHerbDiseaseRelByIds" parameterType="String">
+        delete from herb_disease_rel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

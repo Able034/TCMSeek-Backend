@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.TcmSyndromesMapper">
+    
+    <resultMap type="TcmSyndromes" id="TcmSyndromesResult">
+        <result property="id"    column="id"    />
+        <result property="tcmSyndromeId"    column="tcm_syndrome_id"    />
+        <result property="syndromeNameZh"    column="syndrome_name_zh"    />
+        <result property="syndromeEnglish"    column="syndrome_english"    />
+        <result property="syndromePinyin"    column="syndrome_pinyin"    />
+        <result property="syndromeDefinitionZh"    column="syndrome_definition_zh"    />
+        <result property="syndromeDescriptionEn"    column="syndrome_description_en"    />
+        <result property="categoryZh"    column="category_zh"    />
+        <result property="categoryEn"    column="category_en"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectTcmSyndromesVo">
+        select id, tcm_syndrome_id, syndrome_name_zh, syndrome_english, syndrome_pinyin, syndrome_definition_zh, syndrome_description_en, category_zh, category_en, source, created_at, updated_at from tcm_syndromes
+    </sql>
+
+    <select id="selectTcmSyndromesList" parameterType="TcmSyndromes" resultMap="TcmSyndromesResult">
+        <include refid="selectTcmSyndromesVo"/>
+        <where>  
+            <if test="tcmSyndromeId != null  and tcmSyndromeId != ''"> and tcm_syndrome_id = #{tcmSyndromeId}</if>
+            <if test="syndromeNameZh != null  and syndromeNameZh != ''"> and syndrome_name_zh = #{syndromeNameZh}</if>
+            <if test="syndromeDefinitionZh != null  and syndromeDefinitionZh != ''"> and syndrome_definition_zh = #{syndromeDefinitionZh}</if>
+            <if test="categoryZh != null  and categoryZh != ''"> and category_zh = #{categoryZh}</if>
+        </where>
+    </select>
+    
+    <select id="selectTcmSyndromesById" parameterType="Long" resultMap="TcmSyndromesResult">
+        <include refid="selectTcmSyndromesVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTcmSyndromes" parameterType="TcmSyndromes" useGeneratedKeys="true" keyProperty="id">
+        insert into tcm_syndromes
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">tcm_syndrome_id,</if>
+            <if test="syndromeNameZh != null and syndromeNameZh != ''">syndrome_name_zh,</if>
+            <if test="syndromeEnglish != null">syndrome_english,</if>
+            <if test="syndromePinyin != null">syndrome_pinyin,</if>
+            <if test="syndromeDefinitionZh != null">syndrome_definition_zh,</if>
+            <if test="syndromeDescriptionEn != null">syndrome_description_en,</if>
+            <if test="categoryZh != null">category_zh,</if>
+            <if test="categoryEn != null">category_en,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">#{tcmSyndromeId},</if>
+            <if test="syndromeNameZh != null and syndromeNameZh != ''">#{syndromeNameZh},</if>
+            <if test="syndromeEnglish != null">#{syndromeEnglish},</if>
+            <if test="syndromePinyin != null">#{syndromePinyin},</if>
+            <if test="syndromeDefinitionZh != null">#{syndromeDefinitionZh},</if>
+            <if test="syndromeDescriptionEn != null">#{syndromeDescriptionEn},</if>
+            <if test="categoryZh != null">#{categoryZh},</if>
+            <if test="categoryEn != null">#{categoryEn},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTcmSyndromes" parameterType="TcmSyndromes">
+        update tcm_syndromes
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">tcm_syndrome_id = #{tcmSyndromeId},</if>
+            <if test="syndromeNameZh != null and syndromeNameZh != ''">syndrome_name_zh = #{syndromeNameZh},</if>
+            <if test="syndromeEnglish != null">syndrome_english = #{syndromeEnglish},</if>
+            <if test="syndromePinyin != null">syndrome_pinyin = #{syndromePinyin},</if>
+            <if test="syndromeDefinitionZh != null">syndrome_definition_zh = #{syndromeDefinitionZh},</if>
+            <if test="syndromeDescriptionEn != null">syndrome_description_en = #{syndromeDescriptionEn},</if>
+            <if test="categoryZh != null">category_zh = #{categoryZh},</if>
+            <if test="categoryEn != null">category_en = #{categoryEn},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTcmSyndromesById" parameterType="Long">
+        delete from tcm_syndromes where id = #{id}
+    </delete>
+
+    <delete id="deleteTcmSyndromesByIds" parameterType="String">
+        delete from tcm_syndromes where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

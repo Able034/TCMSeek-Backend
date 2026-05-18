@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.WmSymptomMapper">
+
+    <!-- 西医症状结果映射 -->
+    <resultMap id="WmSymptomResultMap" type="com.tcmseek.pojo.entity.WmSymptom">
+        <id property="id" column="id"/>
+        <result property="wmSymptomId" column="wm_symptom_id"/>
+        <result property="symptomName" column="symptom_name"/>
+        <result property="umlsId" column="umls_id"/>
+    </resultMap>
+
+    <!-- 中医症状结果映射 -->
+    <resultMap id="TcmSymptomResultMap" type="com.tcmseek.pojo.entity.TcmSymptom">
+        <id property="id" column="id"/>
+        <result property="tcmSymptomId" column="tcm_symptom_id"/>
+        <result property="symptomNameZh" column="symptom_name_zh"/>
+        <result property="symptomPinyin" column="symptom_pinyin"/>
+        <result property="symptomDefinition" column="symptom_definition"/>
+        <result property="symptomLocus" column="symptom_locus"/>
+        <result property="symptomProperty" column="symptom_property"/>
+        <result property="type" column="type"/>
+    </resultMap>
+
+    <!-- 基因/靶标结果映射 -->
+    <resultMap id="TargetResultMap" type="com.tcmseek.pojo.entity.Target">
+        <id property="id" column="id"/>
+        <result property="tcmTarId" column="tcm_tar_id"/>
+        <result property="geneEntrezId" column="gene_entrez_id"/>
+        <result property="symbol" column="symbol"/>
+        <result property="uniprotId" column="uniprot_id"/>
+        <result property="ensemblId" column="ensembl_id"/>
+        <result property="description" column="description"/>
+        <result property="typeOfGene" column="type_of_gene"/>
+    </resultMap>
+
+    <!-- 1. 查询西医症状列表 -->
+    <select id="selectWmSymptomList" resultMap="WmSymptomResultMap">
+        SELECT
+            id,
+            wm_symptom_id,
+            symptom_name,
+            umls_id
+        FROM wm_symptoms
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (symptom_name LIKE CONCAT('%', #{keyword}, '%')
+                OR umls_id LIKE CONCAT('%', #{keyword}, '%')
+                OR wm_symptom_id LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 2. 查询西医症状详情 -->
+    <select id="selectWmSymptomById" resultMap="WmSymptomResultMap">
+        SELECT
+            id,
+            wm_symptom_id,
+            symptom_name,
+            umls_id
+        FROM wm_symptoms
+        WHERE wm_symptom_id = #{wmSymptomId}
+    </select>
+
+    <!-- 3. 查询西医症状关联的中医症状 -->
+    <select id="selectTcmSymptomsByWmSymptomId" resultMap="TcmSymptomResultMap">
+        SELECT
+            ts.id,
+            ts.tcm_symptom_id,
+            ts.symptom_name_zh,
+            ts.symptom_pinyin,
+            ts.symptom_definition,
+            ts.symptom_locus,
+            ts.symptom_property,
+            ts.type
+        FROM tcm_symptoms ts
+        INNER JOIN tcm_wm_symptom_rel rel ON ts.tcm_symptom_id = rel.tcm_symptom_id
+        WHERE rel.wm_symptom_id = #{wmSymptomId}
+        ORDER BY ts.id ASC
+    </select>
+
+    <!-- 4. 查询西医症状关联的基因/靶标 -->
+    <select id="selectGenesByWmSymptomId" resultMap="TargetResultMap">
+        SELECT
+            t.id,
+            t.tcm_tar_id,
+            t.gene_entrez_id,
+            t.symbol,
+            t.uniprot_id,
+            t.ensembl_id,
+            t.description,
+            t.type_of_gene
+        FROM targets t
+        INNER JOIN wm_symptom_gene_rel rel ON t.tcm_tar_id = rel.tcm_tar_id
+        WHERE rel.wm_symptom_id = #{wmSymptomId}
+        ORDER BY t.id ASC
+    </select>
+
+</mapper>
+
+
+

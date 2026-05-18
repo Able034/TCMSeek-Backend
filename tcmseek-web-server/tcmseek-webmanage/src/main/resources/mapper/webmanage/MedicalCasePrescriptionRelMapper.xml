@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.MedicalCasePrescriptionRelMapper">
+    
+    <resultMap type="MedicalCasePrescriptionRel" id="MedicalCasePrescriptionRelResult">
+        <result property="id"    column="id"    />
+        <result property="medCaseId"    column="med_case_id"    />
+        <result property="tcmPrescriptionId"    column="tcm_prescription_id"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="perscriptionNameZh"    column="perscription_name_zh"    />
+    </resultMap>
+
+    <sql id="selectMedicalCasePrescriptionRelVo">
+        select id, med_case_id, tcm_prescription_id, created_at, perscription_name_zh from medical_case_prescription_rel
+    </sql>
+
+    <select id="selectMedicalCasePrescriptionRelList" parameterType="MedicalCasePrescriptionRel" resultMap="MedicalCasePrescriptionRelResult">
+        <include refid="selectMedicalCasePrescriptionRelVo"/>
+        <where>  
+            <if test="medCaseId != null  and medCaseId != ''"> and med_case_id = #{medCaseId}</if>
+            <if test="tcmPrescriptionId != null  and tcmPrescriptionId != ''"> and tcm_prescription_id = #{tcmPrescriptionId}</if>
+            <if test="perscriptionNameZh != null  and perscriptionNameZh != ''"> and perscription_name_zh like concat('%', #{perscriptionNameZh}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectMedicalCasePrescriptionRelById" parameterType="Long" resultMap="MedicalCasePrescriptionRelResult">
+        <include refid="selectMedicalCasePrescriptionRelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertMedicalCasePrescriptionRel" parameterType="MedicalCasePrescriptionRel" useGeneratedKeys="true" keyProperty="id">
+        insert into medical_case_prescription_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="medCaseId != null and medCaseId != ''">med_case_id,</if>
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="perscriptionNameZh != null">perscription_name_zh,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="medCaseId != null and medCaseId != ''">#{medCaseId},</if>
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">#{tcmPrescriptionId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="perscriptionNameZh != null">#{perscriptionNameZh},</if>
+         </trim>
+    </insert>
+
+    <update id="updateMedicalCasePrescriptionRel" parameterType="MedicalCasePrescriptionRel">
+        update medical_case_prescription_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="medCaseId != null and medCaseId != ''">med_case_id = #{medCaseId},</if>
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id = #{tcmPrescriptionId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="perscriptionNameZh != null">perscription_name_zh = #{perscriptionNameZh},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteMedicalCasePrescriptionRelById" parameterType="Long">
+        delete from medical_case_prescription_rel where id = #{id}
+    </delete>
+
+    <delete id="deleteMedicalCasePrescriptionRelByIds" parameterType="String">
+        delete from medical_case_prescription_rel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

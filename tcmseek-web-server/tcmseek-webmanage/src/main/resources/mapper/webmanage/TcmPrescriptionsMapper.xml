@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.TcmPrescriptionsMapper">
+    
+    <resultMap type="TcmPrescriptions" id="TcmPrescriptionsResult">
+        <result property="id"    column="id"    />
+        <result property="tcmPrescriptionId"    column="tcm_prescription_id"    />
+        <result property="nameZh"    column="name_zh"    />
+        <result property="pinyinName"    column="pinyin_name"    />
+        <result property="source"    column="source"    />
+        <result property="indicationsZh"    column="indications_zh"    />
+        <result property="indicationsEn"    column="indications_en"    />
+        <result property="effects"    column="effects"    />
+        <result property="effectsZh"    column="effects_zh"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectTcmPrescriptionsVo">
+        select id, tcm_prescription_id, name_zh, pinyin_name, source, indications_zh, indications_en, effects, effects_zh, created_at, updated_at from tcm_prescriptions
+    </sql>
+
+    <select id="selectTcmPrescriptionsList" parameterType="TcmPrescriptions" resultMap="TcmPrescriptionsResult">
+        <include refid="selectTcmPrescriptionsVo"/>
+        <where>  
+            <if test="tcmPrescriptionId != null  and tcmPrescriptionId != ''"> and tcm_prescription_id = #{tcmPrescriptionId}</if>
+            <if test="nameZh != null  and nameZh != ''"> and name_zh like concat('%', #{nameZh}, '%')</if>
+            <if test="source != null  and source != ''"> and source = #{source}</if>
+            <if test="indicationsZh != null  and indicationsZh != ''"> and indications_zh = #{indicationsZh}</if>
+            <if test="effectsZh != null  and effectsZh != ''"> and effects_zh = #{effectsZh}</if>
+        </where>
+    </select>
+    
+    <select id="selectTcmPrescriptionsById" parameterType="Long" resultMap="TcmPrescriptionsResult">
+        <include refid="selectTcmPrescriptionsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTcmPrescriptions" parameterType="TcmPrescriptions" useGeneratedKeys="true" keyProperty="id">
+        insert into tcm_prescriptions
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id,</if>
+            <if test="nameZh != null">name_zh,</if>
+            <if test="pinyinName != null">pinyin_name,</if>
+            <if test="source != null">source,</if>
+            <if test="indicationsZh != null">indications_zh,</if>
+            <if test="indicationsEn != null">indications_en,</if>
+            <if test="effects != null">effects,</if>
+            <if test="effectsZh != null">effects_zh,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">#{tcmPrescriptionId},</if>
+            <if test="nameZh != null">#{nameZh},</if>
+            <if test="pinyinName != null">#{pinyinName},</if>
+            <if test="source != null">#{source},</if>
+            <if test="indicationsZh != null">#{indicationsZh},</if>
+            <if test="indicationsEn != null">#{indicationsEn},</if>
+            <if test="effects != null">#{effects},</if>
+            <if test="effectsZh != null">#{effectsZh},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTcmPrescriptions" parameterType="TcmPrescriptions">
+        update tcm_prescriptions
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id = #{tcmPrescriptionId},</if>
+            <if test="nameZh != null">name_zh = #{nameZh},</if>
+            <if test="pinyinName != null">pinyin_name = #{pinyinName},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="indicationsZh != null">indications_zh = #{indicationsZh},</if>
+            <if test="indicationsEn != null">indications_en = #{indicationsEn},</if>
+            <if test="effects != null">effects = #{effects},</if>
+            <if test="effectsZh != null">effects_zh = #{effectsZh},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTcmPrescriptionsById" parameterType="Long">
+        delete from tcm_prescriptions where id = #{id}
+    </delete>
+
+    <delete id="deleteTcmPrescriptionsByIds" parameterType="String">
+        delete from tcm_prescriptions where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

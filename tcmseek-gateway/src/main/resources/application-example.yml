@@ -1,0 +1,110 @@
+# Copy this file to application.yml for local development.
+
+server:
+  port: ${GATEWAY_PORT:8090}
+  netty:
+    connection-timeout: 10s
+
+spring:
+  application:
+    name: tcmseek-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
+        register-enabled: ${NACOS_REGISTER_ENABLED:true}
+        metadata:
+          version: 0.1.0
+          service-type: gateway
+    gateway:
+      httpclient:
+        connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:5000}
+        response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:60s}
+      discovery:
+        locator:
+          enabled: false
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns: "*"
+            allowed-methods:
+              - HEAD
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      routes:
+        - id: tcmseek-ai-service
+          uri: lb://tcmseek-ai-service
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+        - id: tcmseek-ai-service-compatible
+          uri: lb://tcmseek-ai-service
+          predicates:
+            - Path=/ai/**
+        - id: tcmseek-admin
+          uri: lb://tcmseek-admin
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - StripPrefix=2
+        - id: tcmseek-web
+          uri: lb://tcmseek-admin
+          predicates:
+            - Path=/api/web/**
+          filters:
+            - StripPrefix=2
+        - id: tcmseek-admin-dev-api-compatible
+          uri: lb://tcmseek-admin
+          predicates:
+            - Path=/dev-api/**
+          filters:
+            - StripPrefix=1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      access: read_only
+
+logging:
+  level:
+    com.tcmseek.gateway: debug
+    org.springframework.cloud.gateway: info
+    com.alibaba.cloud.nacos: info
+
+tcmseek:
+  gateway:
+    auth:
+      enabled: ${GATEWAY_AUTH_ENABLED:true}
+      token-header: ${GATEWAY_AUTH_TOKEN_HEADER:Authorization}
+      validate-url: ${GATEWAY_AUTH_VALIDATE_URL:http://tcmseek-admin/tcmseek/auth/validate}
+      timeout: ${GATEWAY_AUTH_TIMEOUT:5s}
+      protected-paths:
+        - /api/ai/**
+        - /ai/**
+        - /api/web/tcmseek/tools/target-prediction/**
+      excluded-paths:
+        - /api/web/tcmseek/login
+        - /api/web/tcmseek/regist
+        - /api/web/tcmseek/sendCode
+        - /api/web/tcmseek/password/sendCode
+        - /api/web/tcmseek/password/reset

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.CompoundTranscriptomicsMapper">
+    
+    <resultMap type="CompoundTranscriptomics" id="CompoundTranscriptomicsResult">
+        <result property="id"    column="id"    />
+        <result property="inchikey"    column="inchikey"    />
+        <result property="geneEntrezId"    column="gene_entrez_id"    />
+        <result property="log2FcAvg"    column="log2_fc_avg"    />
+        <result property="pValue"    column="p_value"    />
+        <result property="direction"    column="direction"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="gen"    column="gen"    />
+    </resultMap>
+
+    <sql id="selectCompoundTranscriptomicsVo">
+        select id, inchikey, gene_entrez_id, log2_fc_avg, p_value, direction, source, created_at, gen from compound_transcriptomics
+    </sql>
+
+    <select id="selectCompoundTranscriptomicsList" parameterType="CompoundTranscriptomics" resultMap="CompoundTranscriptomicsResult">
+        <include refid="selectCompoundTranscriptomicsVo"/>
+        <where>  
+            <if test="inchikey != null  and inchikey != ''"> and inchikey = #{inchikey}</if>
+            <if test="gen != null  and gen != ''"> and gen like concat('%', #{gen}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectCompoundTranscriptomicsById" parameterType="Long" resultMap="CompoundTranscriptomicsResult">
+        <include refid="selectCompoundTranscriptomicsVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectByCompositeKeys" parameterType="java.util.List" resultMap="CompoundTranscriptomicsResult">
+        <include refid="selectCompoundTranscriptomicsVo"/>
+        where concat(inchikey,'|',ifnull(gene_entrez_id,'')) in
+        <foreach collection="list" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </select>
+
+    <insert id="insertCompoundTranscriptomics" parameterType="CompoundTranscriptomics" useGeneratedKeys="true" keyProperty="id">
+        insert into compound_transcriptomics
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey,</if>
+            <if test="geneEntrezId != null">gene_entrez_id,</if>
+            <if test="log2FcAvg != null">log2_fc_avg,</if>
+            <if test="pValue != null">p_value,</if>
+            <if test="direction != null">direction,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="gen != null and gen != ''">gen,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">#{inchikey},</if>
+            <if test="geneEntrezId != null">#{geneEntrezId},</if>
+            <if test="log2FcAvg != null">#{log2FcAvg},</if>
+            <if test="pValue != null">#{pValue},</if>
+            <if test="direction != null">#{direction},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="gen != null and gen != ''">#{gen},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCompoundTranscriptomics" parameterType="CompoundTranscriptomics">
+        update compound_transcriptomics
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey = #{inchikey},</if>
+            <if test="geneEntrezId != null">gene_entrez_id = #{geneEntrezId},</if>
+            <if test="log2FcAvg != null">log2_fc_avg = #{log2FcAvg},</if>
+            <if test="pValue != null">p_value = #{pValue},</if>
+            <if test="direction != null">direction = #{direction},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="gen != null and gen != ''">gen = #{gen},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCompoundTranscriptomicsById" parameterType="Long">
+        delete from compound_transcriptomics where id = #{id}
+    </delete>
+
+    <delete id="deleteCompoundTranscriptomicsByIds" parameterType="String">
+        delete from compound_transcriptomics where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <insert id="batchInsertCompoundTranscriptomics" parameterType="java.util.List">
+        insert into compound_transcriptomics
+        (inchikey, gene_entrez_id, log2_fc_avg, p_value, direction, source, created_at, gen)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.inchikey}, #{item.geneEntrezId}, #{item.log2FcAvg}, #{item.pValue}, #{item.direction},
+             #{item.source}, #{item.createdAt}, #{item.gen})
+        </foreach>
+    </insert>
+</mapper>

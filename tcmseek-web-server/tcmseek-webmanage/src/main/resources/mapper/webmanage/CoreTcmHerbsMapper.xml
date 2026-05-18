@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.CoreTcmHerbsMapper">
+    
+    <resultMap type="CoreTcmHerbs" id="CoreTcmHerbsResult">
+        <result property="id"    column="id"    />
+        <result property="tcmHerbId"    column="tcm_herb_id"    />
+        <result property="herbNameZh"    column="herb_name_zh"    />
+        <result property="pinyinName"    column="pinyin_name"    />
+        <result property="latinName"    column="latin_name"    />
+        <result property="englishName"    column="english_name"    />
+        <result property="type"    column="type"    />
+        <result property="efficacyZh"    column="efficacy_zh"    />
+        <result property="functionEn"    column="function_en"    />
+        <result property="efficacyCategory"    column="efficacy_category"    />
+        <result property="toxicityZh"    column="toxicity_zh"    />
+        <result property="toxicEn"    column="toxic_en"    />
+        <result property="toxicDescriptionZh"    column="toxic_description_zh"    />
+        <result property="toxicEffectEn"    column="toxic_effect_en"    />
+        <result property="pharmacopoeiaRecord"    column="pharmacopoeia_record"    />
+        <result property="classification"    column="classification"    />
+        <result property="usePart"    column="use_part"    />
+        <result property="natureTasteZh"    column="nature_taste_zh"    />
+        <result property="propertyEn"    column="property_en"    />
+        <result property="meridianZh"    column="meridian_zh"    />
+        <result property="meridianTropismEn"    column="meridian_tropism_en"    />
+        <result property="indicationsZh"    column="indications_zh"    />
+        <result property="indicationEn"    column="indication_en"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+        <result property="classificationZh"    column="classification_zh"    />
+    </resultMap>
+
+    <sql id="selectCoreTcmHerbsVo">
+        select id, tcm_herb_id, herb_name_zh, pinyin_name, latin_name, english_name, type, efficacy_zh, function_en, efficacy_category, toxicity_zh, toxic_en, toxic_description_zh, toxic_effect_en, pharmacopoeia_record, classification, use_part, nature_taste_zh, property_en, meridian_zh, meridian_tropism_en, indications_zh, indication_en, created_at, updated_at, classification_zh from core_tcm_herbs
+    </sql>
+
+    <select id="selectCoreTcmHerbsList" parameterType="CoreTcmHerbs" resultMap="CoreTcmHerbsResult">
+        <include refid="selectCoreTcmHerbsVo"/>
+        <where>  
+            <if test="tcmHerbId != null  and tcmHerbId != ''"> and tcm_herb_id = #{tcmHerbId}</if>
+            <if test="herbNameZh != null  and herbNameZh != ''"> and herb_name_zh like concat('%', #{herbNameZh}, '%')</if>
+            <if test="pinyinName != null  and pinyinName != ''"> and pinyin_name like concat('%', #{pinyinName}, '%')</if>
+            <if test="latinName != null  and latinName != ''"> and latin_name like concat('%', #{latinName}, '%')</if>
+            <if test="englishName != null  and englishName != ''"> and english_name like concat('%', #{englishName}, '%')</if>
+            <if test="type != null  and type != ''"> and type = #{type}</if>
+            <if test="efficacyZh != null  and efficacyZh != ''"> and efficacy_zh = #{efficacyZh}</if>
+            <if test="efficacyCategory != null  and efficacyCategory != ''"> and efficacy_category = #{efficacyCategory}</if>
+            <if test="toxicityZh != null  and toxicityZh != ''"> and toxicity_zh = #{toxicityZh}</if>
+            <if test="toxicDescriptionZh != null  and toxicDescriptionZh != ''"> and toxic_description_zh = #{toxicDescriptionZh}</if>
+            <if test="pharmacopoeiaRecord != null  and pharmacopoeiaRecord != ''"> and pharmacopoeia_record = #{pharmacopoeiaRecord}</if>
+            <if test="usePart != null  and usePart != ''"> and use_part = #{usePart}</if>
+            <if test="natureTasteZh != null  and natureTasteZh != ''"> and nature_taste_zh = #{natureTasteZh}</if>
+            <if test="meridianZh != null  and meridianZh != ''"> and meridian_zh = #{meridianZh}</if>
+            <if test="indicationsZh != null  and indicationsZh != ''"> and indications_zh = #{indicationsZh}</if>
+            <if test="classificationZh != null  and classificationZh != ''"> and classification_zh = #{classificationZh}</if>
+        </where>
+    </select>
+    
+    <select id="selectCoreTcmHerbsById" parameterType="Long" resultMap="CoreTcmHerbsResult">
+        <include refid="selectCoreTcmHerbsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCoreTcmHerbs" parameterType="CoreTcmHerbs" useGeneratedKeys="true" keyProperty="id">
+        insert into core_tcm_herbs
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">tcm_herb_id,</if>
+            <if test="herbNameZh != null and herbNameZh != ''">herb_name_zh,</if>
+            <if test="pinyinName != null and pinyinName != ''">pinyin_name,</if>
+            <if test="latinName != null and latinName != ''">latin_name,</if>
+            <if test="englishName != null and englishName != ''">english_name,</if>
+            <if test="type != null and type != ''">type,</if>
+            <if test="efficacyZh != null and efficacyZh != ''">efficacy_zh,</if>
+            <if test="functionEn != null and functionEn != ''">function_en,</if>
+            <if test="efficacyCategory != null and efficacyCategory != ''">efficacy_category,</if>
+            <if test="toxicityZh != null and toxicityZh != ''">toxicity_zh,</if>
+            <if test="toxicEn != null and toxicEn != ''">toxic_en,</if>
+            <if test="toxicDescriptionZh != null and toxicDescriptionZh != ''">toxic_description_zh,</if>
+            <if test="toxicEffectEn != null and toxicEffectEn != ''">toxic_effect_en,</if>
+            <if test="pharmacopoeiaRecord != null and pharmacopoeiaRecord != ''">pharmacopoeia_record,</if>
+            <if test="classification != null and classification != ''">classification,</if>
+            <if test="usePart != null and usePart != ''">use_part,</if>
+            <if test="natureTasteZh != null and natureTasteZh != ''">nature_taste_zh,</if>
+            <if test="propertyEn != null and propertyEn != ''">property_en,</if>
+            <if test="meridianZh != null and meridianZh != ''">meridian_zh,</if>
+            <if test="meridianTropismEn != null and meridianTropismEn != ''">meridian_tropism_en,</if>
+            <if test="indicationsZh != null and indicationsZh != ''">indications_zh,</if>
+            <if test="indicationEn != null and indicationEn != ''">indication_en,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+            <if test="classificationZh != null and classificationZh != ''">classification_zh,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">#{tcmHerbId},</if>
+            <if test="herbNameZh != null and herbNameZh != ''">#{herbNameZh},</if>
+            <if test="pinyinName != null and pinyinName != ''">#{pinyinName},</if>
+            <if test="latinName != null and latinName != ''">#{latinName},</if>
+            <if test="englishName != null and englishName != ''">#{englishName},</if>
+            <if test="type != null and type != ''">#{type},</if>
+            <if test="efficacyZh != null and efficacyZh != ''">#{efficacyZh},</if>
+            <if test="functionEn != null and functionEn != ''">#{functionEn},</if>
+            <if test="efficacyCategory != null and efficacyCategory != ''">#{efficacyCategory},</if>
+            <if test="toxicityZh != null and toxicityZh != ''">#{toxicityZh},</if>
+            <if test="toxicEn != null and toxicEn != ''">#{toxicEn},</if>
+            <if test="toxicDescriptionZh != null and toxicDescriptionZh != ''">#{toxicDescriptionZh},</if>
+            <if test="toxicEffectEn != null and toxicEffectEn != ''">#{toxicEffectEn},</if>
+            <if test="pharmacopoeiaRecord != null and pharmacopoeiaRecord != ''">#{pharmacopoeiaRecord},</if>
+            <if test="classification != null and classification != ''">#{classification},</if>
+            <if test="usePart != null and usePart != ''">#{usePart},</if>
+            <if test="natureTasteZh != null and natureTasteZh != ''">#{natureTasteZh},</if>
+            <if test="propertyEn != null and propertyEn != ''">#{propertyEn},</if>
+            <if test="meridianZh != null and meridianZh != ''">#{meridianZh},</if>
+            <if test="meridianTropismEn != null and meridianTropismEn != ''">#{meridianTropismEn},</if>
+            <if test="indicationsZh != null and indicationsZh != ''">#{indicationsZh},</if>
+            <if test="indicationEn != null and indicationEn != ''">#{indicationEn},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+            <if test="classificationZh != null and classificationZh != ''">#{classificationZh},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCoreTcmHerbs" parameterType="CoreTcmHerbs">
+        update core_tcm_herbs
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">tcm_herb_id = #{tcmHerbId},</if>
+            <if test="herbNameZh != null and herbNameZh != ''">herb_name_zh = #{herbNameZh},</if>
+            <if test="pinyinName != null and pinyinName != ''">pinyin_name = #{pinyinName},</if>
+            <if test="latinName != null and latinName != ''">latin_name = #{latinName},</if>
+            <if test="englishName != null and englishName != ''">english_name = #{englishName},</if>
+            <if test="type != null and type != ''">type = #{type},</if>
+            <if test="efficacyZh != null and efficacyZh != ''">efficacy_zh = #{efficacyZh},</if>
+            <if test="functionEn != null and functionEn != ''">function_en = #{functionEn},</if>
+            <if test="efficacyCategory != null and efficacyCategory != ''">efficacy_category = #{efficacyCategory},</if>
+            <if test="toxicityZh != null and toxicityZh != ''">toxicity_zh = #{toxicityZh},</if>
+            <if test="toxicEn != null and toxicEn != ''">toxic_en = #{toxicEn},</if>
+            <if test="toxicDescriptionZh != null and toxicDescriptionZh != ''">toxic_description_zh = #{toxicDescriptionZh},</if>
+            <if test="toxicEffectEn != null and toxicEffectEn != ''">toxic_effect_en = #{toxicEffectEn},</if>
+            <if test="pharmacopoeiaRecord != null and pharmacopoeiaRecord != ''">pharmacopoeia_record = #{pharmacopoeiaRecord},</if>
+            <if test="classification != null and classification != ''">classification = #{classification},</if>
+            <if test="usePart != null and usePart != ''">use_part = #{usePart},</if>
+            <if test="natureTasteZh != null and natureTasteZh != ''">nature_taste_zh = #{natureTasteZh},</if>
+            <if test="propertyEn != null and propertyEn != ''">property_en = #{propertyEn},</if>
+            <if test="meridianZh != null and meridianZh != ''">meridian_zh = #{meridianZh},</if>
+            <if test="meridianTropismEn != null and meridianTropismEn != ''">meridian_tropism_en = #{meridianTropismEn},</if>
+            <if test="indicationsZh != null and indicationsZh != ''">indications_zh = #{indicationsZh},</if>
+            <if test="indicationEn != null and indicationEn != ''">indication_en = #{indicationEn},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="classificationZh != null and classificationZh != ''">classification_zh = #{classificationZh},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCoreTcmHerbsById" parameterType="Long">
+        delete from core_tcm_herbs where id = #{id}
+    </delete>
+
+    <delete id="deleteCoreTcmHerbsByIds" parameterType="String">
+        delete from core_tcm_herbs where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

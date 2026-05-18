@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.TargetPredictionJobMapper">
+
+    <resultMap id="BaseResultMap" type="com.tcmseek.pojo.entity.TargetPredictionJob">
+        <id property="id" column="id"/>
+        <result property="wemolJobId" column="wemol_job_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="moduleId" column="module_id"/>
+        <result property="moduleName" column="module_name"/>
+        <result property="requestPayloadJson" column="request_payload_json"/>
+        <result property="paramsJson" column="params_json"/>
+        <result property="uploadFileName" column="upload_file_name"/>
+        <result property="uploadPath" column="upload_path"/>
+        <result property="status" column="status"/>
+        <result property="lastMessage" column="last_message"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="resultDir" column="result_dir"/>
+        <result property="resultDirUseTaskName" column="result_dir_use_task_name"/>
+        <result property="predictedTargetsJson" column="predicted_targets_json"/>
+        <result property="detailsJson" column="details_json"/>
+        <result property="resultFilesJson" column="result_files_json"/>
+        <result property="progress" column="progress"/>
+        <result property="retryCount" column="retry_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="finishedAt" column="finished_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.tcmseek.pojo.entity.TargetPredictionJob" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO target_prediction_job
+        (wemol_job_id, user_name, module_id, module_name, request_payload_json, params_json, upload_file_name, upload_path,
+         status, last_message, error_message, result_dir, result_dir_use_task_name, predicted_targets_json, details_json,
+         result_files_json, progress, retry_count, created_at, updated_at, finished_at)
+        VALUES (#{wemolJobId}, #{userName}, #{moduleId}, #{moduleName}, #{requestPayloadJson}, #{paramsJson},
+                #{uploadFileName}, #{uploadPath}, #{status}, #{lastMessage}, #{errorMessage}, #{resultDir},
+                #{resultDirUseTaskName}, #{predictedTargetsJson}, #{detailsJson}, #{resultFilesJson}, #{progress},
+                #{retryCount}, #{createdAt}, #{updatedAt}, #{finishedAt})
+    </insert>
+
+    <select id="selectById" parameterType="long" resultMap="BaseResultMap">
+        SELECT
+            id, wemol_job_id, user_name, module_id, module_name, request_payload_json, params_json, upload_file_name,
+            upload_path, status, last_message, error_message, result_dir, result_dir_use_task_name, predicted_targets_json,
+            details_json, result_files_json, progress, retry_count, created_at, updated_at, finished_at
+        FROM target_prediction_job
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="selectByUserName" parameterType="string" resultMap="BaseResultMap">
+        SELECT
+            id, wemol_job_id, user_name, module_id, module_name, request_payload_json, params_json, upload_file_name,
+            upload_path, status, last_message, error_message, result_dir, result_dir_use_task_name, predicted_targets_json,
+            details_json, result_files_json, progress, retry_count, created_at, updated_at, finished_at
+        FROM target_prediction_job
+        WHERE user_name = #{userName}
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="update" parameterType="com.tcmseek.pojo.entity.TargetPredictionJob">
+        UPDATE target_prediction_job
+        <set>
+            <if test="wemolJobId != null">wemol_job_id = #{wemolJobId},</if>
+            <if test="userName != null">user_name = #{userName},</if>
+            <if test="moduleId != null">module_id = #{moduleId},</if>
+            <if test="moduleName != null">module_name = #{moduleName},</if>
+            <if test="requestPayloadJson != null">request_payload_json = #{requestPayloadJson},</if>
+            <if test="paramsJson != null">params_json = #{paramsJson},</if>
+            <if test="uploadFileName != null">upload_file_name = #{uploadFileName},</if>
+            <if test="uploadPath != null">upload_path = #{uploadPath},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="lastMessage != null">last_message = #{lastMessage},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage},</if>
+            <if test="resultDir != null">result_dir = #{resultDir},</if>
+            <if test="resultDirUseTaskName != null">result_dir_use_task_name = #{resultDirUseTaskName},</if>
+            <if test="predictedTargetsJson != null">predicted_targets_json = #{predictedTargetsJson},</if>
+            <if test="detailsJson != null">details_json = #{detailsJson},</if>
+            <if test="resultFilesJson != null">result_files_json = #{resultFilesJson},</if>
+            <if test="progress != null">progress = #{progress},</if>
+            <if test="retryCount != null">retry_count = #{retryCount},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="finishedAt != null">finished_at = #{finishedAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>

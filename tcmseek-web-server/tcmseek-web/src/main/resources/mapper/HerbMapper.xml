@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.HerbMapper">
+
+    <resultMap id="HerbResult" type="com.tcmseek.pojo.entity.coreTcmHerbs">
+        <id property="id" column="id"/>
+        <result property="tcmHerbId" column="tcm_herb_id"/>
+        <result property="herbNameZh" column="herb_name_zh"/>
+        <result property="pinyinName" column="pinyin_name"/>
+        <result property="latinName" column="latin_name"/>
+        <result property="englishName" column="english_name"/>
+        <result property="type" column="type"/>
+        <result property="efficacyZh" column="efficacy_zh"/>
+        <result property="functionEn" column="function_en"/>
+        <result property="efficacyCategory" column="efficacy_category"/>
+        <result property="toxicityZh" column="toxicity_zh"/>
+        <result property="toxicEn" column="toxic_en"/>
+        <result property="toxicDescriptionZh" column="toxic_description_zh"/>
+        <result property="toxicEffectEn" column="toxic_effect_en"/>
+        <result property="pharmacopoeiaRecord" column="pharmacopoeia_record"/>
+        <result property="classification" column="classification"/>
+        <result property="classificationZh" column="classification_zh"/>
+        <result property="usePart" column="use_part"/>
+        <result property="natureTasteZh" column="nature_taste_zh"/>
+        <result property="propertyEn" column="property_en"/>
+        <result property="meridianZh" column="meridian_zh"/>
+        <result property="meridianTropismEn" column="meridian_tropism_en"/>
+        <result property="indicationsZh" column="indications_zh"/>
+        <result property="indicationEn" column="indication_en"/>
+    </resultMap>
+
+    <!-- 查询中药材列表 -->
+    <select id="selectHerbList" resultMap="HerbResult">
+        SELECT
+            id,
+            tcm_herb_id,
+            herb_name_zh,
+            pinyin_name,
+            latin_name,
+            english_name,
+            type,
+            efficacy_zh,
+            function_en,
+            efficacy_category,
+            toxicity_zh,
+            toxic_en,
+            toxic_description_zh,
+            toxic_effect_en,
+            pharmacopoeia_record,
+            classification,
+            classification_zh,
+            use_part,
+            nature_taste_zh,
+            property_en,
+            meridian_zh,
+            meridian_tropism_en,
+            indications_zh,
+            indication_en
+        FROM core_tcm_herbs
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    herb_name_zh LIKE CONCAT('%', #{keyword}, '%')
+                    OR pinyin_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR latin_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR classification LIKE CONCAT('%', #{keyword}, '%')
+                    OR classification_zh LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+            <if test="efficacyCategory != null and efficacyCategory != ''">
+                AND efficacy_category = #{efficacyCategory}
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 根据ID查询中药材详情 -->
+    <select id="selectHerbById" resultMap="HerbResult">
+        SELECT
+            id,
+            tcm_herb_id,
+            herb_name_zh,
+            pinyin_name,
+            latin_name,
+            english_name,
+            type,
+            efficacy_zh,
+            function_en,
+            efficacy_category,
+            toxicity_zh,
+            toxic_en,
+            toxic_description_zh,
+            toxic_effect_en,
+            pharmacopoeia_record,
+            classification,
+            classification_zh,
+            use_part,
+            nature_taste_zh,
+            property_en,
+            meridian_zh,
+            meridian_tropism_en,
+            indications_zh,
+            indication_en
+        FROM core_tcm_herbs
+        WHERE tcm_herb_id = #{tcmHerbId}
+    </select>
+
+    <!-- 全文搜索中药材 -->
+    <select id="searchHerbsByFulltext" resultMap="HerbResult">
+        SELECT
+            id,
+            tcm_herb_id,
+            herb_name_zh,
+            pinyin_name,
+            latin_name,
+            english_name,
+            type,
+            efficacy_zh,
+            function_en,
+            efficacy_category,
+            toxicity_zh,
+            toxic_en,
+            toxic_description_zh,
+            toxic_effect_en,
+            pharmacopoeia_record,
+            classification,
+            classification_zh,
+            use_part,
+            nature_taste_zh,
+            property_en,
+            meridian_zh,
+            meridian_tropism_en,
+            indications_zh,
+            indication_en
+        FROM core_tcm_herbs
+        WHERE MATCH(efficacy_zh, indications_zh) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE)
+           OR herb_name_zh LIKE CONCAT('%', #{keyword}, '%')
+           OR pinyin_name LIKE CONCAT('%', #{keyword}, '%')
+           OR classification LIKE CONCAT('%', #{keyword}, '%')
+           OR classification_zh LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY id ASC
+    </select>
+    <select id="selectFormulasByHerbId" resultType="com.tcmseek.pojo.entity.tcmPrescriptions">
+        SELECT
+            tp.id,
+            tp.tcm_prescription_id,
+            tp.name_zh,
+            tp.pinyin_name,
+            tp.source,
+            tp.indications_zh,
+            tp.indications_en,
+            tp.effects,
+            tp.effects_zh
+        FROM tcm_prescriptions tp
+        WHERE EXISTS (
+            SELECT 1 FROM prescription_core_herb_rel pchr
+            WHERE pchr.tcm_prescription_id = tp.tcm_prescription_id
+              AND pchr.tcm_herb_id = #{herbId}
+        )
+        ORDER BY tp.id ASC
+    </select>
+
+    <!-- 获取中药转录组学数据 -->
+    <select id="selectTranscriptomicsByHerbId" resultType="map">
+        SELECT
+            ht.gene_name AS geneName,
+            ht.log2_fc_avg AS log2FcAvg,
+            ht.p_value AS pValue,
+            ht.direction,
+            ht.source,
+            CASE
+                WHEN ABS(ht.log2_fc_avg) >= 1 AND ht.p_value &lt; 0.05 THEN 'significant'
+                ELSE 'not_significant'
+            END AS significance,
+            CASE
+                WHEN ht.p_value &lt; 0.001 THEN '***'
+                WHEN ht.p_value &lt; 0.01 THEN '**'
+                WHEN ht.p_value &lt; 0.05 THEN '*'
+                ELSE 'ns'
+            END AS significanceLabel
+        FROM herb_transcriptomics ht
+        WHERE ht.tcm_herb_id = #{tcmHerbId}
+        ORDER BY ABS(ht.log2_fc_avg) DESC
+    </select>
+
+    <!-- 获取中药转录组学统计信息 -->
+    <select id="getTranscriptomicsStatistics" resultType="map">
+        SELECT
+            COUNT(*) AS totalGenes,
+            SUM(CASE WHEN direction = 'up' THEN 1 ELSE 0 END) AS upregulatedGenes,
+            SUM(CASE WHEN direction = 'down' THEN 1 ELSE 0 END) AS downregulatedGenes,
+            SUM(CASE WHEN ABS(log2_fc_avg) >= 1 AND p_value &lt; 0.05 THEN 1 ELSE 0 END) AS significantGenes,
+            SUM(CASE WHEN direction = 'up' AND ABS(log2_fc_avg) >= 1 AND p_value &lt; 0.05 THEN 1 ELSE 0 END) AS significantUpregulated,
+            SUM(CASE WHEN direction = 'down' AND ABS(log2_fc_avg) >= 1 AND p_value &lt; 0.05 THEN 1 ELSE 0 END) AS significantDownregulated,
+            MAX(ABS(log2_fc_avg)) AS maxAbsLog2Fc,
+            MIN(p_value) AS minPValue
+        FROM herb_transcriptomics
+        WHERE tcm_herb_id = #{tcmHerbId}
+    </select>
+
+</mapper>
+

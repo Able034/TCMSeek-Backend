@@ -1,0 +1,118 @@
+# Copy this file to application.yml for local development.
+# Do not commit application.yml because it may contain API keys and graph credentials.
+
+server:
+  port: ${AI_SERVICE_PORT:8088}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: tcmseek-ai-service
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${AI_POSTGRES_URL:jdbc:postgresql://127.0.0.1:5432/tcmseek_ai}
+    username: ${AI_POSTGRES_USERNAME:postgres}
+    password: ${AI_POSTGRES_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${AI_POSTGRES_POOL_SIZE:5}
+      minimum-idle: ${AI_POSTGRES_MIN_IDLE:1}
+      connection-timeout: ${AI_POSTGRES_CONNECT_TIMEOUT_MS:5000}
+      initialization-fail-timeout: ${AI_POSTGRES_INIT_FAIL_TIMEOUT:-1}
+  data:
+    redis:
+      host: ${AI_REDIS_HOST:127.0.0.1}
+      port: ${AI_REDIS_PORT:6379}
+      database: ${AI_REDIS_DATABASE:0}
+      password: ${AI_REDIS_PASSWORD:}
+      timeout: ${AI_REDIS_TIMEOUT:5s}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
+        register-enabled: ${NACOS_REGISTER_ENABLED:true}
+        metadata:
+          version: 0.1.0
+          service-type: ai
+          framework: spring-ai
+  ai:
+    openai:
+      api-key: ${DEEPSEEK_API_KEY:}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
+          temperature: ${DEEPSEEK_TEMPERATURE:0.2}
+          max-tokens: ${DEEPSEEK_MAX_TOKENS:2048}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+logging:
+  level:
+    com.tcmseek.ai: info
+    com.tcmseek.ai.graph: debug
+    org.springframework.ai: info
+
+tcmseek:
+  neo4j:
+    uri: ${TCM_NEO4J_URI:neo4j://127.0.0.1:7687}
+    username: ${TCM_NEO4J_USERNAME:neo4j}
+    password: ${TCM_NEO4J_PASSWORD:}
+  ai:
+    runtime:
+      request-timeout: ${AI_REQUEST_TIMEOUT:60s}
+      max-retries: ${AI_MAX_RETRIES:1}
+      retry-backoff: ${AI_RETRY_BACKOFF:500ms}
+      model-executor-pool-size: ${AI_MODEL_EXECUTOR_POOL_SIZE:8}
+      question-log-max-length: ${AI_QUESTION_LOG_MAX_LENGTH:120}
+      max-reply-chars: ${AI_MAX_REPLY_CHARS:4000}
+    tools:
+      query-limit: ${AI_TOOL_QUERY_LIMIT:1000}
+      answer-item-limit: ${AI_TOOL_ANSWER_ITEM_LIMIT:8}
+    conversation:
+      persistence-enabled: ${AI_CONVERSATION_PERSISTENCE_ENABLED:true}
+      context-message-limit: ${AI_CONVERSATION_CONTEXT_MESSAGE_LIMIT:20}
+    cache:
+      enabled: ${AI_REDIS_CACHE_ENABLED:true}
+      key-prefix: ${AI_REDIS_KEY_PREFIX:ai}
+      context-ttl: ${AI_REDIS_CONTEXT_TTL:2h}
+      export-ttl: ${AI_REDIS_EXPORT_TTL:30m}
+    no-tool-result-message: 知识图谱未查询到相关数据。
+    reply-truncated-message: 回答已压缩，完整明细请通过 CSV 下载。
+    summary-prompt-template: >
+      用户问题：
+      {question}
+
+      知识图谱工具查询结果 JSON：
+      {toolResultJson}
+
+      CSV下载地址：
+      {csvDownloadUrl}
+
+      请只根据工具结果回答。正文不要输出 CSV 原始 URL，前端会单独展示下载按钮。
+      不要向用户展示函数名、工具名、接口名或括号中的内部实现名称，例如 findMedicalCasePrescriptions。
+      输出格式固定为：1）一句核心结论；2）3 个以内要点；3）最多 {answerItemLimit} 行的精简 Markdown 表格。
+      表格列数控制在 3 列以内，列名要短；长 ID 可以放在第一列，但不要额外解释每一行。
+      如果 total 大于 items 数量，只说“完整明细可点击下载完整结果”，不要写下载地址。
+      不要在正文中罗列超过 {answerItemLimit} 个实体；不要重复表格中已经出现的长 ID。
+    system-prompt: >
+      你是 TCMSeek 的中医药知识图谱问答助手。回答要专业、简洁、可验证。
+      用户会用自然语言提问，不需要用户明确说“调用工具”。当问题涉及中药、方剂、化合物、靶点、
+      疾病、证候、症状之间的关系时，优先选择最合适的知识图谱工具查询，再基于工具结果回答。
+      回答正文面向普通用户，不要出现函数名、工具名、接口名或括号中的内部实现名称，例如 findMedicalCasePrescriptions。
+      不要编造图谱中没有返回的数据；如果工具没有结果，请明确说明未查询到。
+      当工具结果很多时，只总结核心结论并展示少量代表性结果，完整明细以接口返回的 csvDownloadUrl 和前端下载按钮为准。

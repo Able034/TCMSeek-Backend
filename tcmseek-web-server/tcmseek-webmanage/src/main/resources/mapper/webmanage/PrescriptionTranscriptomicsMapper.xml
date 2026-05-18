@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.PrescriptionTranscriptomicsMapper">
+    
+    <resultMap type="PrescriptionTranscriptomics" id="PrescriptionTranscriptomicsResult">
+        <result property="id"    column="id"    />
+        <result property="tcmPrescriptionId"    column="tcm_prescription_id"    />
+        <result property="geneName"    column="gene_name"    />
+        <result property="log2FcAvg"    column="log2_fc_avg"    />
+        <result property="pValue"    column="p_value"    />
+        <result property="direction"    column="direction"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectPrescriptionTranscriptomicsVo">
+        select id, tcm_prescription_id, gene_name, log2_fc_avg, p_value, direction, source, created_at from prescription_transcriptomics
+    </sql>
+
+    <select id="selectPrescriptionTranscriptomicsList" parameterType="PrescriptionTranscriptomics" resultMap="PrescriptionTranscriptomicsResult">
+        <include refid="selectPrescriptionTranscriptomicsVo"/>
+        <where>  
+            <if test="tcmPrescriptionId != null  and tcmPrescriptionId != ''"> and tcm_prescription_id = #{tcmPrescriptionId}</if>
+            <if test="geneName != null  and geneName != ''"> and gene_name like concat('%', #{geneName}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectPrescriptionTranscriptomicsById" parameterType="Long" resultMap="PrescriptionTranscriptomicsResult">
+        <include refid="selectPrescriptionTranscriptomicsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertPrescriptionTranscriptomics" parameterType="PrescriptionTranscriptomics" useGeneratedKeys="true" keyProperty="id">
+        insert into prescription_transcriptomics
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id,</if>
+            <if test="geneName != null and geneName != ''">gene_name,</if>
+            <if test="log2FcAvg != null">log2_fc_avg,</if>
+            <if test="pValue != null">p_value,</if>
+            <if test="direction != null">direction,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">#{tcmPrescriptionId},</if>
+            <if test="geneName != null and geneName != ''">#{geneName},</if>
+            <if test="log2FcAvg != null">#{log2FcAvg},</if>
+            <if test="pValue != null">#{pValue},</if>
+            <if test="direction != null">#{direction},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updatePrescriptionTranscriptomics" parameterType="PrescriptionTranscriptomics">
+        update prescription_transcriptomics
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id = #{tcmPrescriptionId},</if>
+            <if test="geneName != null and geneName != ''">gene_name = #{geneName},</if>
+            <if test="log2FcAvg != null">log2_fc_avg = #{log2FcAvg},</if>
+            <if test="pValue != null">p_value = #{pValue},</if>
+            <if test="direction != null">direction = #{direction},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deletePrescriptionTranscriptomicsById" parameterType="Long">
+        delete from prescription_transcriptomics where id = #{id}
+    </delete>
+
+    <delete id="deletePrescriptionTranscriptomicsByIds" parameterType="String">
+        delete from prescription_transcriptomics where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,21 @@
+target/
+.m2/
+*.log
+
+# Local service documents are summarized by the root README.md.
+docs/
+README.md
+
+# Local Spring configuration may contain secrets.
+src/main/resources/application*.yml
+src/main/resources/application*.yaml
+src/main/resources/application*.properties
+src/main/resources/bootstrap*.yml
+src/main/resources/bootstrap*.yaml
+src/main/resources/bootstrap*.properties
+!src/main/resources/application*-example.yml
+!src/main/resources/application*-example.yaml
+!src/main/resources/application*-example.properties
+!src/main/resources/bootstrap*-example.yml
+!src/main/resources/bootstrap*-example.yaml
+!src/main/resources/bootstrap*-example.properties

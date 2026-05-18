@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.SymptomMapper">
+
+    <resultMap id="SymptomResult" type="com.tcmseek.pojo.entity.TcmSymptom">
+        <id property="id" column="id"/>
+        <result property="tcmSymptomId" column="tcm_symptom_id"/>
+        <result property="symptomNameZh" column="symptom_name_zh"/>
+        <result property="symptomPinyin" column="symptom_pinyin"/>
+        <result property="symptomDefinition" column="symptom_definition"/>
+        <result property="symptomLocus" column="symptom_locus"/>
+        <result property="symptomProperty" column="symptom_property"/>
+        <result property="type" column="type"/>
+    </resultMap>
+
+    <!-- 查询中医症状列表 -->
+    <select id="selectSymptomList" resultMap="SymptomResult">
+        SELECT
+            id,
+            tcm_symptom_id,
+            symptom_name_zh,
+            symptom_pinyin,
+            symptom_definition,
+            symptom_locus,
+            symptom_property,
+            type
+        FROM tcm_symptoms
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    symptom_name_zh LIKE CONCAT('%', #{keyword}, '%')
+                    OR symptom_pinyin LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="locus != null and locus != ''">
+                AND symptom_locus = #{locus}
+            </if>
+            <if test="type != null and type != ''">
+                AND type LIKE CONCAT('%', #{type}, '%')
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 根据ID查询症状详情 -->
+    <select id="selectSymptomById" resultMap="SymptomResult">
+        SELECT
+            id,
+            tcm_symptom_id,
+            symptom_name_zh,
+            symptom_pinyin,
+            symptom_definition,
+            symptom_locus,
+            symptom_property,
+            type
+        FROM tcm_symptoms
+        WHERE tcm_symptom_id = #{tcmSymptomId}
+    </select>
+
+    <!-- 查询症状的相关中药 -->
+    <select id="selectHerbsBySymptomId" resultType="com.tcmseek.pojo.entity.coreTcmHerbs">
+        SELECT
+            h.id,
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM core_tcm_herbs h
+        INNER JOIN herb_symptom_rel hs ON h.tcm_herb_id = hs.tcm_herb_id
+        WHERE hs.tcm_symptom_id = #{tcmSymptomId}
+        ORDER BY h.id ASC
+    </select>
+
+    <!-- 查询症状的相关方剂 -->
+    <select id="selectPrescriptionsBySymptomId" resultType="com.tcmseek.pojo.entity.TcmPrescription">
+        SELECT
+            p.id,
+            p.tcm_prescription_id AS tcmPrescriptionId,
+            p.name_zh AS nameZh,
+            p.pinyin_name AS pinyinName,
+            p.source,
+            p.indications_zh AS indicationsZh,
+            p.indications_en AS indicationsEn,
+            p.effects,
+            p.effects_zh AS effectsZh
+        FROM tcm_prescriptions p
+        INNER JOIN prescription_symptom_rel ps ON p.tcm_prescription_id = ps.tcm_prescription_id
+        WHERE ps.tcm_symptom_id = #{tcmSymptomId}
+        ORDER BY p.id ASC
+    </select>
+
+    <!-- 查询症状的关联证候 -->
+    <select id="selectSyndromesBySymptomId" resultType="com.tcmseek.pojo.entity.TcmSyndrome">
+        SELECT
+            syn.id,
+            syn.tcm_syndrome_id AS tcmSyndromeId,
+            syn.syndrome_name_zh AS syndromeNameZh,
+            syn.syndrome_english AS syndromeEnglish,
+            syn.syndrome_pinyin AS syndromePinyin,
+            syn.syndrome_definition_zh AS syndromeDefinitionZh,
+            syn.syndrome_description_en AS syndromeDescriptionEn,
+            syn.category_zh AS categoryZh,
+            syn.category_en AS categoryEn,
+            syn.source
+        FROM tcm_syndromes syn
+        INNER JOIN syndrome_symptom_rel ss ON syn.tcm_syndrome_id = ss.tcm_syndrome_id
+        WHERE ss.tcm_symptom_id = #{tcmSymptomId}
+        ORDER BY syn.id ASC
+    </select>
+
+    <!-- 根据中药ID查询相关症状 -->
+    <select id="selectSymptomsByHerbId" resultType="com.tcmseek.pojo.entity.TcmSymptom">
+        SELECT
+            s.id,
+            s.tcm_symptom_id AS tcmSymptomId,
+            s.symptom_name_zh AS symptomNameZh,
+            s.symptom_pinyin AS symptomPinyin,
+            s.symptom_definition AS symptomDefinition,
+            s.symptom_locus AS symptomLocus,
+            s.symptom_property AS symptomProperty,
+            s.type
+        FROM tcm_symptoms s
+        INNER JOIN herb_symptom_rel hs ON s.tcm_symptom_id = hs.tcm_symptom_id
+        WHERE hs.tcm_herb_id = #{tcmHerbId}
+        ORDER BY s.id ASC
+    </select>
+
+    <!-- 查询中医症状的关联西医症状 -->
+    <select id="selectWmSymptomsBySymptomId" resultType="com.tcmseek.pojo.entity.WmSymptom">
+        SELECT
+            wm.id,
+            wm.wm_symptom_id AS wmSymptomId,
+            wm.symptom_name AS symptomName,
+            wm.umls_id AS umlsId
+        FROM wm_symptoms wm
+        INNER JOIN tcm_wm_symptom_rel rel ON wm.wm_symptom_id = rel.wm_symptom_id
+        WHERE rel.tcm_symptom_id = #{tcmSymptomId}
+        ORDER BY wm.id ASC
+    </select>
+
+</mapper>
+

@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.KnowledgeGraphMapper">
+
+    <!-- ==================== 中心节点查询 ==================== -->
+    
+    <select id="getHerbById" resultType="map">
+        SELECT tcm_herb_id as id, herb_name_zh as label
+        FROM core_tcm_herbs
+        WHERE tcm_herb_id = #{herbId} 
+           OR herb_name_zh = #{herbId}
+           OR pinyin_name = #{herbId}
+        LIMIT 1
+    </select>
+    
+    <select id="getPrescriptionById" resultType="map">
+        SELECT tcm_prescription_id as id, name_zh as label
+        FROM tcm_prescriptions
+        WHERE tcm_prescription_id = #{prescriptionId}
+           OR name_zh = #{prescriptionId}
+           OR pinyin_name = #{prescriptionId}
+        LIMIT 1
+    </select>
+    
+    <select id="getCompoundById" resultType="map">
+        SELECT inchikey as id, 
+               COALESCE(molecular_formula, inchikey) as label
+        FROM tcm_compounds
+        WHERE inchikey = #{inchikey}
+    </select>
+    
+    <select id="getGeneById" resultType="map">
+        SELECT tcm_tar_id as id, symbol as label
+        FROM targets
+        WHERE tcm_tar_id = #{geneId}
+           OR symbol = #{geneId}
+        LIMIT 1
+    </select>
+    
+    <select id="getDiseaseById" resultType="map">
+        SELECT disease_id as id, disease_name as label
+        FROM diseases
+        WHERE disease_id = #{diseaseId}
+           OR disease_name = #{diseaseId}
+        LIMIT 1
+    </select>
+    
+    <select id="getSymptomById" resultType="map">
+        SELECT tcm_symptom_id as id, symptom_name_zh as label
+        FROM tcm_symptoms
+        WHERE tcm_symptom_id = #{symptomId}
+           OR symptom_name_zh = #{symptomId}
+           OR symptom_pinyin = #{symptomId}
+        LIMIT 1
+    </select>
+    
+    <select id="getSyndromeById" resultType="map">
+        SELECT tcm_syndrome_id as id, syndrome_name_zh as label
+        FROM tcm_syndromes
+        WHERE tcm_syndrome_id = #{syndromeId}
+           OR syndrome_name_zh = #{syndromeId}
+           OR syndrome_pinyin = #{syndromeId}
+           OR syndrome_english = #{syndromeId}
+        LIMIT 1
+    </select>
+    
+    <select id="getWmSymptomById" resultType="map">
+        SELECT wm_symptom_id as id, symptom_name as label
+        FROM wm_symptoms
+        WHERE wm_symptom_id = #{wmSymptomId}
+           OR symptom_name = #{wmSymptomId}
+        LIMIT 1
+    </select>
+
+    <!-- ==================== 中药材关联查询 ==================== -->
+    
+    <select id="getHerbCompounds" resultType="map">
+        SELECT DISTINCT c.inchikey as id, 
+               COALESCE(c.compound_name, c.inchikey) as label
+        FROM herb_compound_rel hc
+        INNER JOIN tcm_compounds c ON hc.inchikey = c.inchikey
+        WHERE hc.tcm_herb_id = #{herbId}
+    </select>
+    
+    <select id="getHerbDiseases" resultType="map">
+        SELECT DISTINCT d.disease_id as id, d.disease_name as label
+        FROM herb_disease_rel hd
+        INNER JOIN diseases d ON hd.disease_id = d.disease_id
+        WHERE hd.tcm_herb_id = #{herbId}
+    </select>
+    
+    <select id="getHerbSyndromes" resultType="map">
+        SELECT DISTINCT s.tcm_syndrome_id as id, s.syndrome_name_zh as label
+        FROM herb_syndrome_rel hs
+        INNER JOIN tcm_syndromes s ON hs.tcm_syndrome_id = s.tcm_syndrome_id
+        WHERE hs.tcm_herb_id = #{herbId}
+    </select>
+    
+    <select id="getHerbSymptoms" resultType="map">
+        SELECT DISTINCT sy.tcm_symptom_id as id, sy.symptom_name_zh as label
+        FROM herb_symptom_rel hs
+        INNER JOIN tcm_symptoms sy ON hs.tcm_symptom_id = sy.tcm_symptom_id
+        WHERE hs.tcm_herb_id = #{herbId}
+    </select>
+    
+    <select id="getHerbPrescriptions" resultType="map">
+        SELECT  p.tcm_prescription_id as id, p.name_zh as label
+        FROM prescription_core_herb_rel pc
+        INNER JOIN tcm_prescriptions p ON pc.tcm_prescription_id = p.tcm_prescription_id
+        WHERE pc.tcm_herb_id = #{herbId}
+    </select>
+
+    <!-- ==================== 方剂关联查询 ==================== -->
+    
+    <select id="getPrescriptionHerbs" resultType="map">
+        SELECT DISTINCT h.tcm_herb_id as id, h.herb_name_zh as label
+        FROM prescription_core_herb_rel pc
+        INNER JOIN core_tcm_herbs h ON pc.tcm_herb_id = h.tcm_herb_id
+        WHERE pc.tcm_prescription_id = #{prescriptionId}
+    </select>
+    
+    <select id="getPrescriptionDiseases" resultType="map">
+        SELECT DISTINCT d.disease_id as id, d.disease_name as label
+        FROM prescription_disease_rel pd
+        INNER JOIN diseases d ON pd.disease_id = d.disease_id
+        WHERE pd.tcm_prescription_id = #{prescriptionId}
+    </select>
+    
+    <select id="getPrescriptionSyndromes" resultType="map">
+        SELECT DISTINCT s.tcm_syndrome_id as id, s.syndrome_name_zh as label
+        FROM prescription_syndrome_rel ps
+        INNER JOIN tcm_syndromes s ON ps.tcm_syndrome_id = s.tcm_syndrome_id
+        WHERE ps.tcm_prescription_id = #{prescriptionId}
+    </select>
+    
+    <select id="getPrescriptionSymptoms" resultType="map">
+        SELECT DISTINCT sy.tcm_symptom_id as id, sy.symptom_name_zh as label
+        FROM prescription_symptom_rel ps
+        INNER JOIN tcm_symptoms sy ON ps.tcm_symptom_id = sy.tcm_symptom_id
+        WHERE ps.tcm_prescription_id = #{prescriptionId}
+    </select>
+
+    <!-- ==================== 化合物关联查询 ==================== -->
+    
+    <select id="getCompoundHerbs" resultType="map">
+        SELECT DISTINCT h.tcm_herb_id as id, h.herb_name_zh as label
+        FROM herb_compound_rel hc
+        INNER JOIN core_tcm_herbs h ON hc.tcm_herb_id = h.tcm_herb_id
+        WHERE hc.inchikey = #{inchikey}
+    </select>
+    
+    <select id="getCompoundTargets" resultType="map">
+        SELECT DISTINCT t.tcm_tar_id as id, t.symbol as label
+        FROM compound_target_rel ct
+        INNER JOIN targets t ON ct.tcm_tar_id = t.tcm_tar_id
+        WHERE ct.inchikey = #{inchikey}
+    </select>
+
+    <!-- ==================== 基因关联查询 ==================== -->
+    
+    <select id="getGeneCompounds" resultType="map">
+        SELECT DISTINCT c.inchikey as id, 
+               COALESCE(c.molecular_formula, c.inchikey) as label
+        FROM compound_target_rel ct
+        INNER JOIN tcm_compounds c ON ct.inchikey = c.inchikey
+        WHERE ct.tcm_tar_id = #{geneId}
+    </select>
+    
+    <select id="getGeneDiseases" resultType="map">
+        SELECT DISTINCT d.disease_id as id, d.disease_name as label
+        FROM disease_gene_rel dg
+        INNER JOIN diseases d ON dg.disease_id = d.disease_id
+        WHERE dg.tcm_tar_id = #{geneId}
+    </select>
+    
+    <select id="getGeneSyndromes" resultType="map">
+        SELECT DISTINCT s.tcm_syndrome_id as id, s.syndrome_name_zh as label
+        FROM syndrome_gene_rel sg
+        INNER JOIN tcm_syndromes s ON sg.tcm_syndrome_id = s.tcm_syndrome_id
+        WHERE sg.tcm_tar_id = #{geneId}
+    </select>
+    
+    <select id="getGenePathways" resultType="map">
+        SELECT DISTINCT p.pathway_id as id, p.name as label
+        FROM pathway_target_rel pt
+        INNER JOIN pathways p ON pt.pathway_id = p.pathway_id
+        WHERE pt.tcm_tar_id = #{geneId}
+    </select>
+    
+    <select id="getGenePhenotypes" resultType="map">
+        SELECT DISTINCT ph.phenotype_id as id, ph.phenotype_name as label
+        FROM phenotype_target_rel pt
+        INNER JOIN phenotypes ph ON pt.phenotype_id = ph.phenotype_id
+        WHERE pt.tcm_tar_id = #{geneId}
+    </select>
+
+    <!-- ==================== 疾病关联查询 ==================== -->
+    
+    <select id="getDiseaseGenes" resultType="map">
+        SELECT DISTINCT t.tcm_tar_id as id, t.symbol as label
+        FROM disease_gene_rel dg
+        INNER JOIN targets t ON dg.tcm_tar_id = t.tcm_tar_id
+        WHERE dg.disease_id = #{diseaseId}
+    </select>
+    
+    <select id="getDiseaseHerbs" resultType="map">
+        SELECT DISTINCT h.tcm_herb_id as id, h.herb_name_zh as label
+        FROM herb_disease_rel hd
+        INNER JOIN core_tcm_herbs h ON hd.tcm_herb_id = h.tcm_herb_id
+        WHERE hd.disease_id = #{diseaseId}
+    </select>
+    
+    <select id="getDiseaseSyndromes" resultType="map">
+        SELECT DISTINCT s.tcm_syndrome_id as id, s.syndrome_name_zh as label
+        FROM prescription_disease_rel pd
+        INNER JOIN prescription_syndrome_rel ps ON pd.tcm_prescription_id = ps.tcm_prescription_id
+        INNER JOIN tcm_syndromes s ON ps.tcm_syndrome_id = s.tcm_syndrome_id
+        WHERE pd.disease_id = #{diseaseId}
+    </select>
+
+    <!-- ==================== 中医症状关联查询 ==================== -->
+    
+    <select id="getSymptomPrescriptions" resultType="map">
+        SELECT DISTINCT p.tcm_prescription_id as id, p.name_zh as label
+        FROM prescription_symptom_rel ps
+        INNER JOIN tcm_prescriptions p ON ps.tcm_prescription_id = p.tcm_prescription_id
+        WHERE ps.tcm_symptom_id = #{symptomId}
+    </select>
+    
+    <select id="getSymptomHerbs" resultType="map">
+        SELECT DISTINCT h.tcm_herb_id as id, h.herb_name_zh as label
+        FROM herb_symptom_rel hs
+        INNER JOIN core_tcm_herbs h ON hs.tcm_herb_id = h.tcm_herb_id
+        WHERE hs.tcm_symptom_id = #{symptomId}
+    </select>
+    
+    <select id="getSymptomSyndromes" resultType="map">
+        SELECT DISTINCT s.tcm_syndrome_id as id, s.syndrome_name_zh as label
+        FROM syndrome_symptom_rel ss
+        INNER JOIN tcm_syndromes s ON ss.tcm_syndrome_id = s.tcm_syndrome_id
+        WHERE ss.tcm_symptom_id = #{symptomId}
+    </select>
+    
+    <select id="getSymptomWmSymptoms" resultType="map">
+        SELECT DISTINCT w.wm_symptom_id as id, w.symptom_name as label
+        FROM tcm_wm_symptom_rel tws
+        INNER JOIN wm_symptoms w ON tws.wm_symptom_id = w.wm_symptom_id
+        WHERE tws.tcm_symptom_id = #{symptomId}
+    </select>
+
+    <!-- ==================== 中医证候关联查询 ==================== -->
+    
+    <select id="getSyndromePrescriptions" resultType="map">
+        SELECT DISTINCT p.tcm_prescription_id as id, p.name_zh as label
+        FROM prescription_syndrome_rel ps
+        INNER JOIN tcm_prescriptions p ON ps.tcm_prescription_id = p.tcm_prescription_id
+        WHERE ps.tcm_syndrome_id = #{syndromeId}
+    </select>
+    
+    <select id="getSyndromeSymptoms" resultType="map">
+        SELECT DISTINCT s.tcm_symptom_id as id, s.symptom_name_zh as label
+        FROM syndrome_symptom_rel ss
+        INNER JOIN tcm_symptoms s ON ss.tcm_symptom_id = s.tcm_symptom_id
+        WHERE ss.tcm_syndrome_id = #{syndromeId}
+    </select>
+    
+    <select id="getSyndromeHerbs" resultType="map">
+        SELECT DISTINCT h.tcm_herb_id as id, h.herb_name_zh as label
+        FROM herb_syndrome_rel hs
+        INNER JOIN core_tcm_herbs h ON hs.tcm_herb_id = h.tcm_herb_id
+        WHERE hs.tcm_syndrome_id = #{syndromeId}
+    </select>
+    
+    <select id="getSyndromeGenes" resultType="map">
+        SELECT DISTINCT t.tcm_tar_id as id, t.symbol as label
+        FROM syndrome_gene_rel sg
+        INNER JOIN targets t ON sg.tcm_tar_id = t.tcm_tar_id
+        WHERE sg.tcm_syndrome_id = #{syndromeId}
+    </select>
+
+    <!-- ==================== 西医症状关联查询 ==================== -->
+    
+    <select id="getWmSymptomTcmSymptoms" resultType="map">
+        SELECT DISTINCT t.tcm_symptom_id as id, t.symptom_name_zh as label
+        FROM tcm_wm_symptom_rel tws
+        INNER JOIN tcm_symptoms t ON tws.tcm_symptom_id = t.tcm_symptom_id
+        WHERE tws.wm_symptom_id = #{wmSymptomId}
+    </select>
+    
+    <select id="getWmSymptomGenes" resultType="map">
+        SELECT DISTINCT t.tcm_tar_id as id, t.symbol as label
+        FROM wm_symptom_gene_rel wsg
+        INNER JOIN targets t ON wsg.tcm_tar_id = t.tcm_tar_id
+        WHERE wsg.wm_symptom_id = #{wmSymptomId}
+    </select>
+
+    <!-- ==================== 搜索相关 ==================== -->
+    
+    <select id="searchHerbs" resultType="map">
+        SELECT tcm_herb_id as id, herb_name_zh as name, pinyin_name as pinyin
+        FROM core_tcm_herbs
+        WHERE herb_name_zh LIKE #{keyword} OR pinyin_name LIKE #{keyword}
+        ORDER BY herb_name_zh
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countHerbs" resultType="int">
+        SELECT COUNT(*)
+        FROM core_tcm_herbs
+        WHERE herb_name_zh LIKE #{keyword} OR pinyin_name LIKE #{keyword}
+    </select>
+    
+    <select id="searchPrescriptions" resultType="map">
+        SELECT tcm_prescription_id as id, name_zh as name, pinyin_name as pinyin
+        FROM tcm_prescriptions
+        WHERE name_zh LIKE #{keyword} OR pinyin_name LIKE #{keyword}
+        ORDER BY name_zh
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countPrescriptions" resultType="int">
+        SELECT COUNT(*)
+        FROM tcm_prescriptions
+        WHERE name_zh LIKE #{keyword} OR pinyin_name LIKE #{keyword}
+    </select>
+    
+    <select id="searchCompounds" resultType="map">
+        SELECT inchikey as id, 
+               COALESCE(molecular_formula, inchikey) as name,
+               CAST(molecular_weight AS CHAR) as extra
+        FROM tcm_compounds
+        WHERE inchikey LIKE #{keyword} OR molecular_formula LIKE #{keyword}
+        ORDER BY molecular_weight
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countCompounds" resultType="int">
+        SELECT COUNT(*)
+        FROM tcm_compounds
+        WHERE inchikey LIKE #{keyword} OR molecular_formula LIKE #{keyword}
+    </select>
+    
+    <select id="searchGenes" resultType="map">
+        SELECT tcm_tar_id as id, symbol as name, description as extra
+        FROM targets
+        WHERE symbol LIKE #{keyword} OR description LIKE #{keyword}
+        ORDER BY symbol
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countGenes" resultType="int">
+        SELECT COUNT(*)
+        FROM targets
+        WHERE symbol LIKE #{keyword} OR description LIKE #{keyword}
+    </select>
+    
+    <select id="searchDiseases" resultType="map">
+        SELECT disease_id as id, disease_name as name, source as extra
+        FROM diseases
+        WHERE disease_name LIKE #{keyword} OR disease_id LIKE #{keyword}
+        ORDER BY disease_name
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countDiseases" resultType="int">
+        SELECT COUNT(*)
+        FROM diseases
+        WHERE disease_name LIKE #{keyword} OR disease_id LIKE #{keyword}
+    </select>
+    
+    <select id="searchSymptoms" resultType="map">
+        SELECT tcm_symptom_id as id, symptom_name_zh as name, symptom_pinyin as extra
+        FROM tcm_symptoms
+        WHERE symptom_name_zh LIKE #{keyword} OR symptom_pinyin LIKE #{keyword}
+        ORDER BY symptom_name_zh
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countSymptoms" resultType="int">
+        SELECT COUNT(*)
+        FROM tcm_symptoms
+        WHERE symptom_name_zh LIKE #{keyword} OR symptom_pinyin LIKE #{keyword}
+    </select>
+    
+    <select id="searchSyndromes" resultType="map">
+        SELECT tcm_syndrome_id as id, syndrome_name_zh as name, syndrome_pinyin as extra
+        FROM tcm_syndromes
+        WHERE syndrome_name_zh LIKE #{keyword} 
+           OR syndrome_pinyin LIKE #{keyword}
+           OR syndrome_english LIKE #{keyword}
+        ORDER BY syndrome_name_zh
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countSyndromes" resultType="int">
+        SELECT COUNT(*)
+        FROM tcm_syndromes
+        WHERE syndrome_name_zh LIKE #{keyword} 
+           OR syndrome_pinyin LIKE #{keyword}
+           OR syndrome_english LIKE #{keyword}
+    </select>
+    
+    <select id="searchWmSymptoms" resultType="map">
+        SELECT wm_symptom_id as id, symptom_name as name, umls_id as extra
+        FROM wm_symptoms
+        WHERE symptom_name LIKE #{keyword} OR wm_symptom_id LIKE #{keyword}
+        ORDER BY symptom_name
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="countWmSymptoms" resultType="int">
+        SELECT COUNT(*)
+        FROM wm_symptoms
+        WHERE symptom_name LIKE #{keyword} OR wm_symptom_id LIKE #{keyword}
+    </select>
+
+</mapper>
+
+

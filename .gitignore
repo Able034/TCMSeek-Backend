@@ -1,0 +1,117 @@
+# ---------------------------------------------------------------------------
+# Build outputs
+# ---------------------------------------------------------------------------
+target/
+build/
+out/
+dist/
+*.class
+*.jar
+*.war
+*.ear
+
+# ---------------------------------------------------------------------------
+# Maven / Gradle
+# ---------------------------------------------------------------------------
+.mvn/timing.properties
+.gradle/
+!.mvn/wrapper/maven-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---------------------------------------------------------------------------
+# IDE and editor files
+# ---------------------------------------------------------------------------
+.idea/
+*.iws
+*.iml
+*.ipr
+.classpath
+.factorypath
+.project
+.settings/
+.vscode/
+
+# ---------------------------------------------------------------------------
+# Runtime logs and temporary files
+# ---------------------------------------------------------------------------
+logs/
+log/
+*.log
+*.pid
+*.hprof
+*.dump
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+
+# ---------------------------------------------------------------------------
+# Local uploads, generated exports, and personal folders
+# ---------------------------------------------------------------------------
+uploads/
+uploadPath/
+uoloadPath/
+profile/
+data/
+export/
+exports/
+docwork/
+
+# Database initialization scripts and data packages are not published.
+DB/
+*.sql
+
+# ---------------------------------------------------------------------------
+# Secrets and local environment files
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.csr
+secrets/
+secret/
+
+# Real local Spring configuration may contain database passwords, Redis
+# credentials, Nacos namespaces, Neo4j passwords, or AI provider keys.
+**/src/main/resources/application*.yml
+**/src/main/resources/application*.yaml
+**/src/main/resources/application*.properties
+**/src/main/resources/bootstrap*.yml
+**/src/main/resources/bootstrap*.yaml
+**/src/main/resources/bootstrap*.properties
+!**/src/main/resources/application*-example.yml
+!**/src/main/resources/application*-example.yaml
+!**/src/main/resources/application*-example.properties
+!**/src/main/resources/bootstrap*-example.yml
+!**/src/main/resources/bootstrap*-example.yaml
+!**/src/main/resources/bootstrap*-example.properties
+
+# ---------------------------------------------------------------------------
+# Local service documents
+#
+# The root README.md is the public backend document. Service-level docs are
+# treated as local notes and are not uploaded.
+# ---------------------------------------------------------------------------
+*.md
+!/README.md
+tcmseek-ai-service/docs/
+tcmseek-gateway/docs/
+tcmseek-web-server/tcmseek-admin/docs/
+
+# ---------------------------------------------------------------------------
+# OS metadata
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

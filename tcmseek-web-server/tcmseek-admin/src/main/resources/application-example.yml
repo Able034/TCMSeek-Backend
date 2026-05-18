@@ -1,0 +1,153 @@
+# Copy this file to application.yml for local development.
+# Do not commit application.yml because it may contain real credentials.
+
+ruoyi:
+  name: Able
+  version: 3.9.0
+  copyrightYear: 2025
+  profile: ${TCMSEEK_UPLOAD_PATH:D:/tcmseek/uploadPath}
+  addressEnabled: false
+  captchaType: math
+
+server:
+  port: ${TCMSEEK_ADMIN_PORT:8080}
+  servlet:
+    context-path: /
+  tomcat:
+    uri-encoding: UTF-8
+    accept-count: 1000
+    threads:
+      max: 800
+      min-spare: 100
+
+logging:
+  level:
+    com.tcmseek: debug
+    org.springframework: warn
+
+user:
+  password:
+    maxRetryCount: 5
+    lockTime: 10
+
+spring:
+  application:
+    name: tcmseek-admin
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
+        register-enabled: ${NACOS_REGISTER_ENABLED:true}
+        metadata:
+          version: 3.9.0
+          service-type: admin
+  mail:
+    host: ${TCM_MAIL_HOST:smtp.example.com}
+    port: ${TCM_MAIL_PORT:465}
+    username: ${TCM_MAIL_USERNAME:}
+    password: ${TCM_MAIL_PASSWORD:}
+    default-encoding: utf-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            required: true
+          socketFactory:
+            port: ${TCM_MAIL_PORT:465}
+            class: javax.net.ssl.SSLSocketFactory
+  messages:
+    basename: i18n/messages
+  profiles:
+    active: druid
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  devtools:
+    restart:
+      enabled: false
+  redis:
+    host: ${REDIS_HOST:127.0.0.1}
+    port: ${REDIS_PORT:6379}
+    database: ${REDIS_DATABASE:0}
+    password: ${REDIS_PASSWORD:}
+    timeout: 10s
+    lettuce:
+      pool:
+        min-idle: 0
+        max-idle: 8
+        max-active: 8
+        max-wait: -1ms
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        concurrency: 3
+
+token:
+  header: Authorization
+  secret: ${TCM_TOKEN_SECRET:change-me}
+  expireTime: 30
+
+mybatis:
+  typeAliasesPackage: com.tcmseek.**.domain
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  configLocation: classpath:mybatis/mybatis-config.xml
+
+pagehelper:
+  helperDialect: mysql
+  supportMethodsArguments: true
+  params: count=countSql
+
+swagger:
+  enabled: true
+  pathMapping: /
+
+target-prediction:
+  cleanup-enabled: true
+  upload-dir: ${TARGET_PREDICTION_UPLOAD_DIR:D:/tcmseek/uploads/target-prediction}
+  result-dir-prefix: ${TARGET_PREDICTION_RESULT_DIR:D:/tcmseek/wemol_results}
+  upload-retention-days: 7
+  result-retention-days: 7
+  service-url: ${TARGET_PREDICTION_SERVICE_URL:http://127.0.0.1:9000}
+
+referer:
+  enabled: false
+  allowed-domains: localhost,127.0.0.1
+
+llm:
+  base-url: ${TCM_LLM_BASE_URL:http://127.0.0.1:8088}
+  model: ${TCM_LLM_MODEL:deepseek-chat}
+  default-max-tokens: 1024
+  default-temperature: 0.3
+  stream: false
+  verify: false
+  connect-timeout: 10s
+  read-timeout: 120s
+
+tcm:
+  neo4j:
+    uri: ${TCM_NEO4J_URI:neo4j://127.0.0.1:7687}
+    username: ${TCM_NEO4J_USERNAME:neo4j}
+    password: ${TCM_NEO4J_PASSWORD:}
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    chat-model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
+    embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:deepseek-embedding}
+
+xss:
+  enabled: true
+  excludes: /system/notice
+  urlPatterns: /system/*,/monitor/*,/tool/*

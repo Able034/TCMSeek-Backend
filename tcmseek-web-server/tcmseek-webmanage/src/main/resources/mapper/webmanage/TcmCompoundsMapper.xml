@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.TcmCompoundsMapper">
+    
+    <resultMap type="TcmCompounds" id="TcmCompoundsResult">
+        <result property="id"    column="id"    />
+        <result property="inchikey"    column="inchikey"    />
+        <result property="canonicalSmiles"    column="canonical_smiles"    />
+        <result property="pubchemCid"    column="pubchem_cid"    />
+        <result property="molecularFormula"    column="molecular_formula"    />
+        <result property="molecularWeight"    column="molecular_weight"    />
+        <result property="exactMass"    column="exact_mass"    />
+        <result property="heavyAtomCount"    column="heavy_atom_count"    />
+        <result property="numAtoms"    column="num_atoms"    />
+        <result property="numBonds"    column="num_bonds"    />
+        <result property="numRings"    column="num_rings"    />
+        <result property="hBondDonors"    column="h_bond_donors"    />
+        <result property="hBondAcceptors"    column="h_bond_acceptors"    />
+        <result property="logp"    column="logp"    />
+        <result property="tpsa"    column="tpsa"    />
+        <result property="rotatableBonds"    column="rotatable_bonds"    />
+        <result property="fractionCsp3"    column="fraction_csp3"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+        <result property="compoundName"    column="compound_name"    />
+    </resultMap>
+
+    <sql id="selectTcmCompoundsVo">
+        select id, inchikey, canonical_smiles, pubchem_cid, molecular_formula, molecular_weight, exact_mass, heavy_atom_count, num_atoms, num_bonds, num_rings, h_bond_donors, h_bond_acceptors, logp, tpsa, rotatable_bonds, fraction_csp3, created_at, updated_at, compound_name from tcm_compounds
+    </sql>
+
+    <select id="selectTcmCompoundsList" parameterType="TcmCompounds" resultMap="TcmCompoundsResult">
+        <include refid="selectTcmCompoundsVo"/>
+        <where>
+            <if test="inchikey != null  and inchikey != ''"> and inchikey = #{inchikey}</if>
+            <if test="canonicalSmiles != null  and canonicalSmiles != ''"> and canonical_smiles = #{canonicalSmiles}</if>
+            <if test="pubchemCid != null "> and pubchem_cid = #{pubchemCid}</if>
+            <if test="molecularFormula != null  and molecularFormula != ''"> and molecular_formula = #{molecularFormula}</if>
+            <if test="compoundName != null  and compoundName != ''"> and compound_name like concat('%', #{compoundName}, '%')</if>
+        </where>
+    </select>
+
+
+
+    <select id="selectTcmCompoundsById" parameterType="Long" resultMap="TcmCompoundsResult">
+        <include refid="selectTcmCompoundsVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectTcmCompoundsListexport" resultMap="TcmCompoundsResult">
+        select id, inchikey, canonical_smiles, pubchem_cid, molecular_formula, molecular_weight, exact_mass,
+        heavy_atom_count, num_atoms, num_bonds, num_rings, h_bond_donors, h_bond_acceptors, logp,
+        tpsa, rotatable_bonds, fraction_csp3, created_at, updated_at, compound_name
+        from tcm_compounds
+        <where>
+            <if test="filter != null and filter.inchikey != null and filter.inchikey != ''">and inchikey = #{filter.inchikey}</if>
+            <if test="filter != null and filter.canonicalSmiles != null and filter.canonicalSmiles != ''">and canonical_smiles = #{filter.canonicalSmiles}</if>
+            <if test="filter != null and filter.pubchemCid != null">and pubchem_cid = #{filter.pubchemCid}</if>
+            <if test="filter != null and filter.molecularFormula != null and filter.molecularFormula != ''">and molecular_formula = #{filter.molecularFormula}</if>
+            <!-- 前缀匹配可走索引；若必须支持 %xxx%，只能全表扫，速度会慢 -->
+            <if test="filter != null and filter.compoundName != null and filter.compoundName != ''">and compound_name like concat(#{filter.compoundName}, '%')</if>
+            <if test="lastId != null">and id &gt; #{lastId}</if>
+        </where>
+        order by id asc
+        limit #{pageSize}
+    </select>
+
+
+
+    <insert id="insertTcmCompounds" parameterType="TcmCompounds" useGeneratedKeys="true" keyProperty="id">
+        insert into tcm_compounds
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey,</if>
+            <if test="canonicalSmiles != null and canonicalSmiles != ''">canonical_smiles,</if>
+            <if test="pubchemCid != null">pubchem_cid,</if>
+            <if test="molecularFormula != null and molecularFormula != ''">molecular_formula,</if>
+            <if test="molecularWeight != null">molecular_weight,</if>
+            <if test="exactMass != null">exact_mass,</if>
+            <if test="heavyAtomCount != null">heavy_atom_count,</if>
+            <if test="numAtoms != null">num_atoms,</if>
+            <if test="numBonds != null">num_bonds,</if>
+            <if test="numRings != null">num_rings,</if>
+            <if test="hBondDonors != null">h_bond_donors,</if>
+            <if test="hBondAcceptors != null">h_bond_acceptors,</if>
+            <if test="logp != null">logp,</if>
+            <if test="tpsa != null">tpsa,</if>
+            <if test="rotatableBonds != null">rotatable_bonds,</if>
+            <if test="fractionCsp3 != null">fraction_csp3,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+            <if test="compoundName != null and compoundName != ''">compound_name,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">#{inchikey},</if>
+            <if test="canonicalSmiles != null and canonicalSmiles != ''">#{canonicalSmiles},</if>
+            <if test="pubchemCid != null">#{pubchemCid},</if>
+            <if test="molecularFormula != null and molecularFormula != ''">#{molecularFormula},</if>
+            <if test="molecularWeight != null">#{molecularWeight},</if>
+            <if test="exactMass != null">#{exactMass},</if>
+            <if test="heavyAtomCount != null">#{heavyAtomCount},</if>
+            <if test="numAtoms != null">#{numAtoms},</if>
+            <if test="numBonds != null">#{numBonds},</if>
+            <if test="numRings != null">#{numRings},</if>
+            <if test="hBondDonors != null">#{hBondDonors},</if>
+            <if test="hBondAcceptors != null">#{hBondAcceptors},</if>
+            <if test="logp != null">#{logp},</if>
+            <if test="tpsa != null">#{tpsa},</if>
+            <if test="rotatableBonds != null">#{rotatableBonds},</if>
+            <if test="fractionCsp3 != null">#{fractionCsp3},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+            <if test="compoundName != null and compoundName != ''">#{compoundName},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTcmCompounds" parameterType="TcmCompounds">
+        update tcm_compounds
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey = #{inchikey},</if>
+            <if test="canonicalSmiles != null and canonicalSmiles != ''">canonical_smiles = #{canonicalSmiles},</if>
+            <if test="pubchemCid != null">pubchem_cid = #{pubchemCid},</if>
+            <if test="molecularFormula != null and molecularFormula != ''">molecular_formula = #{molecularFormula},</if>
+            <if test="molecularWeight != null">molecular_weight = #{molecularWeight},</if>
+            <if test="exactMass != null">exact_mass = #{exactMass},</if>
+            <if test="heavyAtomCount != null">heavy_atom_count = #{heavyAtomCount},</if>
+            <if test="numAtoms != null">num_atoms = #{numAtoms},</if>
+            <if test="numBonds != null">num_bonds = #{numBonds},</if>
+            <if test="numRings != null">num_rings = #{numRings},</if>
+            <if test="hBondDonors != null">h_bond_donors = #{hBondDonors},</if>
+            <if test="hBondAcceptors != null">h_bond_acceptors = #{hBondAcceptors},</if>
+            <if test="logp != null">logp = #{logp},</if>
+            <if test="tpsa != null">tpsa = #{tpsa},</if>
+            <if test="rotatableBonds != null">rotatable_bonds = #{rotatableBonds},</if>
+            <if test="fractionCsp3 != null">fraction_csp3 = #{fractionCsp3},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="compoundName != null and compoundName != ''">compound_name = #{compoundName},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTcmCompoundsById" parameterType="Long">
+        delete from tcm_compounds where id = #{id}
+    </delete>
+
+    <delete id="deleteTcmCompoundsByIds" parameterType="String">
+        delete from tcm_compounds where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

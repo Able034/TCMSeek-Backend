@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.StatisticsMapper">
+
+    <!-- 统计核心中药数量 -->
+    <select id="countCoreHerbs" resultType="long">
+        SELECT COUNT(*) FROM core_tcm_herbs
+    </select>
+
+    <!-- 统计其他中药数量 -->
+    <select id="countOtherHerbs" resultType="long">
+        SELECT COUNT(*) FROM other_tcm_herbs
+    </select>
+
+    <!-- 统计方剂数量 -->
+    <select id="countPrescriptions" resultType="long">
+        SELECT COUNT(*) FROM tcm_prescriptions
+    </select>
+
+    <!-- 统计症状数量 -->
+    <select id="countSymptoms" resultType="long">
+        SELECT COUNT(*) FROM tcm_symptoms
+    </select>
+
+    <!-- 统计证候数量 -->
+    <select id="countSyndromes" resultType="long">
+        SELECT COUNT(*) FROM tcm_syndromes
+    </select>
+
+    <!-- 统计化合物数量 -->
+    <select id="countCompounds" resultType="long">
+        SELECT COUNT(*) FROM tcm_compounds
+    </select>
+
+    <!-- 统计靶标数量 -->
+    <select id="countTargets" resultType="long">
+        SELECT COUNT(*) FROM targets
+    </select>
+
+    <!-- 统计疾病数量 -->
+    <select id="countDiseases" resultType="long">
+        SELECT COUNT(*) FROM diseases
+    </select>
+
+    <!-- 统计医案数量 -->
+    <select id="countMedicalCases" resultType="long">
+        SELECT COUNT(*) FROM medical_cases
+    </select>
+
+    <!-- 统计中药分类数量 -->
+    <select id="countHerbsByCategory" resultType="map">
+        SELECT
+            COALESCE(type, '未分类') AS category,
+            COUNT(*) AS count
+        FROM core_tcm_herbs
+        GROUP BY type
+        ORDER BY count DESC
+    </select>
+
+    <!-- 统计方剂来源数量 -->
+    <select id="countPrescriptionsBySource" resultType="map">
+        SELECT
+            COALESCE(source, '未知来源') AS source,
+            COUNT(*) AS count
+        FROM tcm_prescriptions
+        GROUP BY source
+        ORDER BY count DESC
+        LIMIT 50
+    </select>
+
+</mapper>
+

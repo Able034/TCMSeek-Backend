@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.MedicalCaseMapper">
+
+    <!-- 医案结果映射 -->
+    <resultMap id="MedicalCaseResult" type="com.tcmseek.pojo.entity.MedicalCase">
+        <id property="id" column="id"/>
+        <result property="medCaseId" column="med_case_id"/>
+        <result property="caseReport" column="case_report"/>
+        <result property="physician" column="physician"/>
+        <result property="tcmDisease" column="tcm_disease"/>
+        <result property="wmDisease" column="wm_disease"/>
+        <result property="tcmSymptoms" column="tcm_symptoms"/>
+        <result property="wmSymptoms" column="wm_symptoms"/>
+        <result property="urinationDefecation" column="urination_defecation"/>
+        <result property="pulseCondition" column="pulse_condition"/>
+        <result property="tongueAppearance" column="tongue_appearance"/>
+        <result property="tcmSyndrome" column="tcm_syndrome"/>
+        <result property="tcmTreatment" column="tcm_treatment"/>
+        <result property="prescription" column="prescription"/>
+        <result property="herbComposition" column="herb_composition"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 根据ID查询医案详情 -->
+    <select id="selectMedicalCaseById" resultMap="MedicalCaseResult">
+        SELECT
+            id,
+            med_case_id,
+            case_report,
+            physician,
+            tcm_disease,
+            wm_disease,
+            tcm_symptoms,
+            wm_symptoms,
+            urination_defecation,
+            pulse_condition,
+            tongue_appearance,
+            tcm_syndrome,
+            tcm_treatment,
+            prescription,
+            herb_composition,
+            created_at,
+            updated_at
+        FROM medical_cases
+        WHERE med_case_id = #{caseId}
+    </select>
+
+    <!-- 查询医案的关联方剂 -->
+    <select id="selectPrescriptionsByCaseId" resultType="com.tcmseek.pojo.entity.TcmPrescription">
+        SELECT
+            p.id,
+            p.tcm_prescription_id AS tcmPrescriptionId,
+            p.name_zh AS nameZh,
+            p.pinyin_name AS pinyinName,
+            p.source,
+            p.indications_zh AS indicationsZh,
+            p.indications_en AS indicationsEn,
+            p.effects,
+            p.effects_zh AS effectsZh
+        FROM tcm_prescriptions p
+        INNER JOIN medical_case_prescription_rel mc ON p.tcm_prescription_id = mc.tcm_prescription_id
+        WHERE mc.med_case_id = #{caseId}
+        ORDER BY p.id ASC
+    </select>
+
+    <!-- 查询医案的关联中药 -->
+    <select id="selectHerbsByCaseId" resultType="com.tcmseek.pojo.entity.coreTcmHerbs">
+        SELECT
+            h.id,
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM core_tcm_herbs h
+        INNER JOIN medical_case_herb_rel mh ON h.tcm_herb_id = mh.tcm_herb_id
+        WHERE mh.med_case_id = #{caseId}
+        ORDER BY h.id ASC
+    </select>
+    <select id="selectMedicalCaseList" resultType="com.tcmseek.pojo.entity.MedicalCase">
+        SELECT
+            id,
+            med_case_id,
+            case_report,
+            physician,
+            tcm_disease,
+            wm_disease,
+            tcm_symptoms,
+            wm_symptoms,
+            urination_defecation,
+            pulse_condition,
+            tongue_appearance,
+            tcm_syndrome,
+            tcm_treatment,
+            prescription,
+            herb_composition
+        FROM medical_cases
+        <where>
+            <if test="keyword != null and keyword != ''">
+                med_case_id LIKE CONCAT('%', #{keyword}, '%')
+                OR case_report LIKE CONCAT('%', #{keyword}, '%')
+                OR physician LIKE CONCAT('%', #{keyword}, '%')
+                OR tcm_disease LIKE CONCAT('%', #{keyword}, '%')
+                OR wm_disease LIKE CONCAT('%', #{keyword}, '%')
+                OR tcm_symptoms LIKE CONCAT('%', #{keyword}, '%')
+                OR wm_symptoms LIKE CONCAT('%', #{keyword}, '%')
+                OR urination_defecation LIKE CONCAT('%', #{keyword}, '%')
+                OR pulse_condition LIKE CONCAT('%', #{keyword}, '%')
+                OR tongue_appearance LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+</mapper>
+
+
+
+
+
+
+
+

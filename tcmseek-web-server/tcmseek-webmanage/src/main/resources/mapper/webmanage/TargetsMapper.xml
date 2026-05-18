@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.TargetsMapper">
+    
+    <resultMap type="Targets" id="TargetsResult">
+        <result property="id"    column="id"    />
+        <result property="tcmTarId"    column="tcm_tar_id"    />
+        <result property="geneEntrezId"    column="gene_entrez_id"    />
+        <result property="symbol"    column="symbol"    />
+        <result property="uniprotId"    column="uniprot_id"    />
+        <result property="ensemblId"    column="ensembl_id"    />
+        <result property="description"    column="description"    />
+        <result property="typeOfGene"    column="type_of_gene"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectTargetsVo">
+        select id, tcm_tar_id, gene_entrez_id, symbol, uniprot_id, ensembl_id, description, type_of_gene, created_at, updated_at from targets
+    </sql>
+
+    <select id="selectTargetsList" parameterType="Targets" resultMap="TargetsResult">
+        <include refid="selectTargetsVo"/>
+        <where>  
+            <if test="tcmTarId != null  and tcmTarId != ''"> and tcm_tar_id = #{tcmTarId}</if>
+            <if test="geneEntrezId != null "> and gene_entrez_id = #{geneEntrezId}</if>
+            <if test="symbol != null  and symbol != ''"> and symbol = #{symbol}</if>
+            <if test="uniprotId != null  and uniprotId != ''"> and uniprot_id = #{uniprotId}</if>
+            <if test="ensemblId != null  and ensemblId != ''"> and ensembl_id = #{ensemblId}</if>
+            <if test="typeOfGene != null  and typeOfGene != ''"> and type_of_gene = #{typeOfGene}</if>
+        </where>
+    </select>
+    
+    <select id="selectTargetsById" parameterType="Long" resultMap="TargetsResult">
+        <include refid="selectTargetsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTargets" parameterType="Targets" useGeneratedKeys="true" keyProperty="id">
+        insert into targets
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id,</if>
+            <if test="geneEntrezId != null">gene_entrez_id,</if>
+            <if test="symbol != null">symbol,</if>
+            <if test="uniprotId != null">uniprot_id,</if>
+            <if test="ensemblId != null">ensembl_id,</if>
+            <if test="description != null">description,</if>
+            <if test="typeOfGene != null">type_of_gene,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmTarId != null and tcmTarId != ''">#{tcmTarId},</if>
+            <if test="geneEntrezId != null">#{geneEntrezId},</if>
+            <if test="symbol != null">#{symbol},</if>
+            <if test="uniprotId != null">#{uniprotId},</if>
+            <if test="ensemblId != null">#{ensemblId},</if>
+            <if test="description != null">#{description},</if>
+            <if test="typeOfGene != null">#{typeOfGene},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTargets" parameterType="Targets">
+        update targets
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id = #{tcmTarId},</if>
+            <if test="geneEntrezId != null">gene_entrez_id = #{geneEntrezId},</if>
+            <if test="symbol != null">symbol = #{symbol},</if>
+            <if test="uniprotId != null">uniprot_id = #{uniprotId},</if>
+            <if test="ensemblId != null">ensembl_id = #{ensemblId},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="typeOfGene != null">type_of_gene = #{typeOfGene},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTargetsById" parameterType="Long">
+        delete from targets where id = #{id}
+    </delete>
+
+    <delete id="deleteTargetsByIds" parameterType="String">
+        delete from targets where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

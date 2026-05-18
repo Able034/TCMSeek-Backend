@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.WmSymptomGeneRelMapper">
+    
+    <resultMap type="WmSymptomGeneRel" id="WmSymptomGeneRelResult">
+        <result property="id"    column="id"    />
+        <result property="wmSymptomId"    column="wm_symptom_id"    />
+        <result property="tcmTarId"    column="tcm_tar_id"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectWmSymptomGeneRelVo">
+        select id, wm_symptom_id, tcm_tar_id, created_at from wm_symptom_gene_rel
+    </sql>
+
+    <select id="selectWmSymptomGeneRelList" parameterType="WmSymptomGeneRel" resultMap="WmSymptomGeneRelResult">
+        <include refid="selectWmSymptomGeneRelVo"/>
+        <where>  
+            <if test="wmSymptomId != null  and wmSymptomId != ''"> and wm_symptom_id = #{wmSymptomId}</if>
+            <if test="tcmTarId != null  and tcmTarId != ''"> and tcm_tar_id = #{tcmTarId}</if>
+        </where>
+    </select>
+    
+    <select id="selectWmSymptomGeneRelById" parameterType="Long" resultMap="WmSymptomGeneRelResult">
+        <include refid="selectWmSymptomGeneRelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertWmSymptomGeneRel" parameterType="WmSymptomGeneRel" useGeneratedKeys="true" keyProperty="id">
+        insert into wm_symptom_gene_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="wmSymptomId != null and wmSymptomId != ''">wm_symptom_id,</if>
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="wmSymptomId != null and wmSymptomId != ''">#{wmSymptomId},</if>
+            <if test="tcmTarId != null and tcmTarId != ''">#{tcmTarId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateWmSymptomGeneRel" parameterType="WmSymptomGeneRel">
+        update wm_symptom_gene_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="wmSymptomId != null and wmSymptomId != ''">wm_symptom_id = #{wmSymptomId},</if>
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id = #{tcmTarId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteWmSymptomGeneRelById" parameterType="Long">
+        delete from wm_symptom_gene_rel where id = #{id}
+    </delete>
+
+    <delete id="deleteWmSymptomGeneRelByIds" parameterType="String">
+        delete from wm_symptom_gene_rel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

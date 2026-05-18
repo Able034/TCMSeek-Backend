@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.SyndromeGeneRelMapper">
+    
+    <resultMap type="SyndromeGeneRel" id="SyndromeGeneRelResult">
+        <result property="id"    column="id"    />
+        <result property="tcmSyndromeId"    column="tcm_syndrome_id"    />
+        <result property="tcmTarId"    column="tcm_tar_id"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectSyndromeGeneRelVo">
+        select id, tcm_syndrome_id, tcm_tar_id, source, created_at from syndrome_gene_rel
+    </sql>
+
+    <select id="selectSyndromeGeneRelList" parameterType="SyndromeGeneRel" resultMap="SyndromeGeneRelResult">
+        <include refid="selectSyndromeGeneRelVo"/>
+        <where>  
+            <if test="tcmSyndromeId != null  and tcmSyndromeId != ''"> and tcm_syndrome_id = #{tcmSyndromeId}</if>
+            <if test="tcmTarId != null  and tcmTarId != ''"> and tcm_tar_id = #{tcmTarId}</if>
+        </where>
+    </select>
+    
+    <select id="selectSyndromeGeneRelById" parameterType="Long" resultMap="SyndromeGeneRelResult">
+        <include refid="selectSyndromeGeneRelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertSyndromeGeneRel" parameterType="SyndromeGeneRel" useGeneratedKeys="true" keyProperty="id">
+        insert into syndrome_gene_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">tcm_syndrome_id,</if>
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">#{tcmSyndromeId},</if>
+            <if test="tcmTarId != null and tcmTarId != ''">#{tcmTarId},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateSyndromeGeneRel" parameterType="SyndromeGeneRel">
+        update syndrome_gene_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">tcm_syndrome_id = #{tcmSyndromeId},</if>
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id = #{tcmTarId},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteSyndromeGeneRelById" parameterType="Long">
+        delete from syndrome_gene_rel where id = #{id}
+    </delete>
+
+    <delete id="deleteSyndromeGeneRelByIds" parameterType="String">
+        delete from syndrome_gene_rel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

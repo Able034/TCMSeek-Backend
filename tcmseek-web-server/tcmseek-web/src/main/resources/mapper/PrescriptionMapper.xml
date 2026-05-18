@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.PrescriptionMapper">
+
+    <resultMap id="PrescriptionResult" type="com.tcmseek.pojo.entity.TcmPrescription">
+        <id property="id" column="id"/>
+        <result property="tcmPrescriptionId" column="tcm_prescription_id"/>
+        <result property="nameZh" column="name_zh"/>
+        <result property="pinyinName" column="pinyin_name"/>
+        <result property="source" column="source"/>
+        <result property="indicationsZh" column="indications_zh"/>
+        <result property="indicationsEn" column="indications_en"/>
+        <result property="effects" column="effects"/>
+        <result property="effectsZh" column="effects_zh"/>
+    </resultMap>
+
+    <!-- 查询方剂列表 -->
+    <select id="selectPrescriptionList" resultMap="PrescriptionResult">
+        SELECT
+            id,
+            tcm_prescription_id,
+            name_zh,
+            pinyin_name,
+            source,
+            indications_zh,
+            indications_en,
+            effects,
+            effects_zh
+        FROM tcm_prescriptions
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    name_zh LIKE CONCAT('%', #{keyword}, '%')
+                    OR pinyin_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="source != null and source != ''">
+                AND source LIKE CONCAT('%', #{source}, '%')
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 根据ID查询方剂详情 -->
+    <select id="selectPrescriptionById" resultMap="PrescriptionResult">
+        SELECT
+            id,
+            tcm_prescription_id,
+            name_zh,
+            pinyin_name,
+            source,
+            indications_zh,
+            indications_en,
+            effects,
+            effects_zh
+        FROM tcm_prescriptions
+        WHERE tcm_prescription_id = #{tcmPrescriptionId}
+    </select>
+
+    <!-- 查询方剂的中药组成（核心中药）- 已废弃，请使用selectCoreHerbsByPrescriptionId -->
+    <select id="selectHerbsByPrescriptionId" resultType="com.tcmseek.pojo.entity.coreTcmHerbs">
+        SELECT
+            h.id,
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM core_tcm_herbs h
+        INNER JOIN prescription_core_herb_rel pr ON h.tcm_herb_id = pr.tcm_herb_id
+        WHERE pr.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY h.id ASC
+    </select>
+
+    <!-- 查询方剂的核心中药组成 -->
+    <select id="selectCoreHerbsByPrescriptionId" resultType="com.tcmseek.pojo.entity.coreTcmHerbs">
+        SELECT
+            h.id,
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM core_tcm_herbs h
+        INNER JOIN prescription_core_herb_rel pr ON h.tcm_herb_id = pr.tcm_herb_id
+        WHERE pr.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY h.id ASC
+    </select>
+
+    <!-- 查询方剂的其他中药组成 -->
+    <select id="selectOtherHerbsByPrescriptionId" resultType="java.util.HashMap">
+        SELECT
+            h.id,
+            h.tcm_herb2_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM other_tcm_herbs h
+        INNER JOIN prescription_other_herb_rel pr ON h.tcm_herb2_id = pr.tcm_herb2_id
+        WHERE pr.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY h.id ASC
+    </select>
+
+    <!-- 查询方剂的疾病关联 -->
+    <select id="selectDiseasesByPrescriptionId" resultType="com.tcmseek.pojo.entity.Disease">
+        SELECT
+            d.id,
+            d.disease_id AS diseaseId,
+            d.disease_name AS diseaseName,
+            d.source
+        FROM diseases d
+        INNER JOIN prescription_disease_rel pd ON d.disease_id = pd.disease_id
+        WHERE pd.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY d.id ASC
+    </select>
+
+    <!-- 查询方剂的症状关联 -->
+    <select id="selectSymptomsByPrescriptionId" resultType="com.tcmseek.pojo.entity.TcmSymptom">
+        SELECT
+            s.id,
+            s.tcm_symptom_id AS tcmSymptomId,
+            s.symptom_name_zh AS symptomNameZh,
+            s.symptom_pinyin AS symptomPinyin,
+            s.symptom_definition AS symptomDefinition,
+            s.symptom_locus AS symptomLocus,
+            s.symptom_property AS symptomProperty,
+            s.type
+        FROM tcm_symptoms s
+        INNER JOIN prescription_symptom_rel ps ON s.tcm_symptom_id = ps.tcm_symptom_id
+        WHERE ps.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY s.id ASC
+    </select>
+
+    <!-- 查询方剂的证候关联 -->
+    <select id="selectSyndromesByPrescriptionId" resultType="com.tcmseek.pojo.entity.TcmSyndrome">
+        SELECT
+            s.id,
+            s.tcm_syndrome_id AS tcmSyndromeId,
+            s.syndrome_name_zh AS syndromeNameZh,
+            s.syndrome_english AS syndromeEnglish,
+            s.syndrome_pinyin AS syndromePinyin,
+            s.syndrome_definition_zh AS syndromeDefinitionZh,
+            s.syndrome_description_en AS syndromeDescriptionEn,
+            s.category_zh AS categoryZh,
+            s.category_en AS categoryEn,
+            s.source
+        FROM tcm_syndromes s
+        INNER JOIN prescription_syndrome_rel ps ON s.tcm_syndrome_id = ps.tcm_syndrome_id
+        WHERE ps.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY s.id ASC
+    </select>
+
+    <!-- 查询方剂的医案关联 -->
+    <select id="selectMedicalCasesByPrescriptionId" resultType="com.tcmseek.pojo.entity.MedicalCase">
+        SELECT
+            mc.id,
+            mc.med_case_id AS medCaseId,
+            mc.case_report AS caseReport,
+            mc.physician,
+            mc.tcm_disease AS tcmDisease,
+            mc.wm_disease AS wmDisease,
+            mc.tcm_symptoms AS tcmSymptoms,
+            mc.wm_symptoms AS wmSymptoms,
+            mc.urination_defecation AS urinationDefecation,
+            mc.pulse_condition AS pulseCondition,
+            mc.tongue_appearance AS tongueAppearance,
+            mc.tcm_syndrome AS tcmSyndrome,
+            mc.tcm_treatment AS tcmTreatment,
+            mc.prescription,
+            mc.herb_composition AS herbComposition,
+            mc.created_at AS createdAt,
+            mc.updated_at AS updatedAt
+        FROM medical_cases mc
+        INNER JOIN medical_case_prescription_rel mcpr ON mc.med_case_id = mcpr.med_case_id
+        WHERE mcpr.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY mc.id ASC
+    </select>
+
+    <!-- 查询方剂的转录组学数据 -->
+    <select id="selectTranscriptomicsByPrescriptionId" resultType="map">
+        SELECT
+            pt.id,
+            pt.tcm_prescription_id AS tcmPrescriptionId,
+            pt.gene_name AS geneName,
+            pt.log2_fc_avg AS log2FcAvg,
+            pt.p_value AS pValue,
+            pt.direction,
+            pt.source,
+            CASE
+                WHEN ABS(pt.log2_fc_avg) >= 1 AND pt.p_value &lt; 0.05 THEN 'significant'
+                ELSE 'not_significant'
+            END AS significance,
+            CASE
+                WHEN pt.p_value &lt; 0.001 THEN '***'
+                WHEN pt.p_value &lt; 0.01 THEN '**'
+                WHEN pt.p_value &lt; 0.05 THEN '*'
+                ELSE 'ns'
+            END AS significanceLabel
+        FROM prescription_transcriptomics pt
+        WHERE pt.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY ABS(pt.log2_fc_avg) DESC
+    </select>
+
+    <!-- 获取方剂转录组学统计信息 -->
+    <select id="getTranscriptomicsStatistics" resultType="map">
+        SELECT
+            COUNT(*) AS totalGenes,
+            SUM(CASE WHEN direction = 'up' THEN 1 ELSE 0 END) AS upregulatedGenes,
+            SUM(CASE WHEN direction = 'down' THEN 1 ELSE 0 END) AS downregulatedGenes,
+            SUM(CASE WHEN ABS(log2_fc_avg) >= 1 AND p_value &lt; 0.05 THEN 1 ELSE 0 END) AS significantGenes,
+            SUM(CASE WHEN direction = 'up' AND ABS(log2_fc_avg) >= 1 AND p_value &lt; 0.05 THEN 1 ELSE 0 END) AS significantUpregulated,
+            SUM(CASE WHEN direction = 'down' AND ABS(log2_fc_avg) >= 1 AND p_value &lt; 0.05 THEN 1 ELSE 0 END) AS significantDownregulated,
+            MAX(ABS(log2_fc_avg)) AS maxAbsLog2Fc,
+            MIN(p_value) AS minPValue
+        FROM prescription_transcriptomics
+        WHERE tcm_prescription_id = #{tcmPrescriptionId}
+    </select>
+
+    <!-- 查询方剂组成中药的转录组学数据（用于对比分析） -->
+    <select id="selectHerbsTranscriptomicsByPrescriptionId" resultType="map">
+        SELECT
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            ht.gene_name AS geneName,
+            ht.log2_fc_avg AS log2FcAvg,
+            ht.p_value AS pValue,
+            ht.direction,
+            ht.source,
+            CASE
+                WHEN ABS(ht.log2_fc_avg) >= 1 AND ht.p_value &lt; 0.05 THEN 'significant'
+                ELSE 'not_significant'
+            END AS significance
+        FROM prescription_core_herb_rel pchr
+        INNER JOIN core_tcm_herbs h ON pchr.tcm_herb_id = h.tcm_herb_id
+        INNER JOIN herb_transcriptomics ht ON h.tcm_herb_id = ht.tcm_herb_id
+        WHERE pchr.tcm_prescription_id = #{tcmPrescriptionId}
+        ORDER BY h.herb_name_zh, ABS(ht.log2_fc_avg) DESC
+    </select>
+
+</mapper>
+

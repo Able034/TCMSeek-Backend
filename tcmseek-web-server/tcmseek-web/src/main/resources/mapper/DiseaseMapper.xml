@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.DiseaseMapper">
+
+    <resultMap id="DiseaseResult" type="com.tcmseek.pojo.entity.Disease">
+        <id property="id" column="id"/>
+        <result property="diseaseId" column="disease_id"/>
+        <result property="diseaseName" column="disease_name"/>
+        <result property="source" column="source"/>
+    </resultMap>
+
+    <!-- 根据中药ID查询疾病关联 -->
+    <select id="selectDiseasesByHerbId" resultMap="DiseaseResult">
+        SELECT
+            d.id,
+            d.disease_id,
+            d.disease_name,
+            d.source
+        FROM diseases d
+        INNER JOIN herb_disease_rel hd ON d.disease_id = hd.disease_id
+        WHERE hd.tcm_herb_id = #{tcmHerbId}
+        ORDER BY d.id ASC
+    </select>
+
+    <!-- 根据疾病ID查询详情 -->
+    <select id="selectDiseaseById" resultMap="DiseaseResult">
+        SELECT
+            id,
+            disease_id,
+            disease_name,
+            source
+        FROM diseases
+        WHERE disease_id = #{diseaseId}
+    </select>
+
+    <!-- 查询疾病的基因关联 -->
+    <select id="selectGenesByDiseaseId" resultType="java.util.HashMap">
+        SELECT
+            t.tcm_tar_id AS tcmTarId,
+            t.symbol,
+            t.gene_entrez_id AS geneEntrezId,
+            t.uniprot_id AS uniprotId,
+            t.description,
+            dg.relation,
+            dg.source
+        FROM targets t
+        INNER JOIN disease_gene_rel dg ON t.tcm_tar_id = dg.tcm_tar_id
+        WHERE dg.disease_id = #{diseaseId}
+        ORDER BY t.id ASC
+    </select>
+
+    <!-- 查询疾病的方剂关联 -->
+    <select id="selectPrescriptionsByDiseaseId" resultType="com.tcmseek.pojo.entity.TcmPrescription">
+        SELECT
+            p.id,
+            p.tcm_prescription_id AS tcmPrescriptionId,
+            p.name_zh AS nameZh,
+            p.pinyin_name AS pinyinName,
+            p.source,
+            p.indications_zh AS indicationsZh,
+            p.indications_en AS indicationsEn,
+            p.effects,
+            p.effects_zh AS effectsZh
+        FROM tcm_prescriptions p
+        INNER JOIN prescription_disease_rel pd ON p.tcm_prescription_id = pd.tcm_prescription_id
+        WHERE pd.disease_id = #{diseaseId}
+        ORDER BY p.id ASC
+    </select>
+
+    <!-- 查询疾病的中药关联 -->
+    <select id="selectHerbsByDiseaseId" resultType="com.tcmseek.pojo.entity.coreTcmHerbs">
+        SELECT
+            h.id,
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM core_tcm_herbs h
+        INNER JOIN herb_disease_rel hd ON h.tcm_herb_id = hd.tcm_herb_id
+        WHERE hd.disease_id = #{diseaseId}
+        ORDER BY h.id ASC
+    </select>
+
+</mapper>

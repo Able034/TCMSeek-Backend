@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.GeneMapper">
+
+    <!-- 获取基因列表 -->
+    <select id="getGeneList" resultType="map">
+        SELECT 
+            tcm_tar_id AS tcmTarId,
+            gene_entrez_id AS geneEntrezId,
+            COALESCE(symbol, '') AS symbol,
+            COALESCE(NULLIF(TRIM(uniprot_id), '#N/A'), NULL) AS uniprotId,
+            COALESCE(ensembl_id, '') AS ensemblId,
+            COALESCE(description, '') AS description,
+            COALESCE(type_of_gene, '') AS typeOfGene
+        FROM targets
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (symbol LIKE CONCAT('%', #{keyword}, '%')
+                OR description LIKE CONCAT('%', #{keyword}, '%')
+                OR uniprot_id LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <!-- 获取基因详情 -->
+    <select id="getGeneById" resultType="map">
+        SELECT 
+            tcm_tar_id AS tcmTarId,
+            gene_entrez_id AS geneEntrezId,
+            COALESCE(symbol, '') AS symbol,
+            COALESCE(NULLIF(TRIM(uniprot_id), '#N/A'), NULL) AS uniprotId,
+            COALESCE(ensembl_id, '') AS ensemblId,
+            COALESCE(description, '') AS description,
+            COALESCE(type_of_gene, '') AS typeOfGene
+        FROM targets
+        WHERE tcm_tar_id = #{geneId}
+    </select>
+
+    <!-- 根据Entrez ID获取基因详情 -->
+    <select id="getGeneByEntrezId" resultType="map">
+        SELECT 
+            tcm_tar_id AS tcmTarId,
+            gene_entrez_id AS geneEntrezId,
+            COALESCE(symbol, '') AS symbol,
+            COALESCE(NULLIF(TRIM(uniprot_id), '#N/A'), NULL) AS uniprotId,
+            COALESCE(ensembl_id, '') AS ensemblId,
+            COALESCE(description, '') AS description,
+            COALESCE(type_of_gene, '') AS typeOfGene
+        FROM targets
+        WHERE gene_entrez_id = #{entrezId}
+    </select>
+
+    <!-- 获取基因的关联化合物 -->
+    <select id="getGeneCompounds" resultType="map">
+        SELECT DISTINCT
+            c.inchikey,
+            c.molecular_formula AS molecularFormula,
+            c.molecular_weight AS molecularWeight,
+            c.pubchem_cid AS pubchemCid
+        FROM compound_target_rel ct
+        INNER JOIN tcm_compounds c ON ct.inchikey = c.inchikey
+        WHERE ct.tcm_tar_id = #{geneId}
+        ORDER BY c.molecular_weight
+    </select>
+
+    <!-- 获取基因的关联疾病 -->
+    <select id="getGeneDiseases" resultType="map">
+        SELECT DISTINCT
+            d.disease_id AS diseaseId,
+            d.disease_name AS diseaseName,
+            d.source
+        FROM disease_gene_rel dg
+        INNER JOIN diseases d ON dg.disease_id = d.disease_id
+        WHERE dg.tcm_tar_id = #{geneId}
+        ORDER BY d.disease_name
+    </select>
+
+    <!-- 获取基因的关联证候 -->
+    <select id="getGeneSyndromes" resultType="map">
+        SELECT DISTINCT
+            s.tcm_syndrome_id AS tcmSyndromeId,
+            s.syndrome_name_zh AS syndromeNameZh,
+            s.syndrome_english AS syndromeEnglish,
+            sg.source
+        FROM syndrome_gene_rel sg
+        INNER JOIN tcm_syndromes s ON sg.tcm_syndrome_id = s.tcm_syndrome_id
+        WHERE sg.tcm_tar_id = #{geneId}
+        ORDER BY s.syndrome_name_zh
+    </select>
+
+    <!-- 获取基因的关联通路 -->
+    <select id="getGenePathways" resultType="map">
+        SELECT DISTINCT
+            p.pathway_id AS pathwayId,
+            p.name,
+            p.source
+        FROM pathway_target_rel pt
+        INNER JOIN pathways p ON pt.pathway_id = p.pathway_id
+        WHERE pt.tcm_tar_id = #{geneId}
+        ORDER BY p.name
+    </select>
+
+    <!-- 获取基因的关联表型 -->
+    <select id="getGenePhenotypes" resultType="map">
+        SELECT DISTINCT
+            ph.phenotype_id AS phenotypeId,
+            ph.phenotype_name AS phenotypeName,
+            ph.source
+        FROM phenotype_target_rel pt
+        INNER JOIN phenotypes ph ON pt.phenotype_id = ph.phenotype_id
+        WHERE pt.tcm_tar_id = #{geneId}
+        ORDER BY ph.phenotype_name
+    </select>
+
+    <!-- 获取基因的关联西医症状 -->
+    <select id="getGeneWmSymptoms" resultType="map">
+        SELECT DISTINCT
+            ws.wm_symptom_id AS wmSymptomId,
+            ws.symptom_name AS symptomName,
+            ws.umls_id AS umlsId
+        FROM wm_symptom_gene_rel wsg
+        INNER JOIN wm_symptoms ws ON wsg.wm_symptom_id = ws.wm_symptom_id
+        WHERE wsg.tcm_tar_id = #{geneId}
+        ORDER BY ws.symptom_name
+    </select>
+
+</mapper>
+

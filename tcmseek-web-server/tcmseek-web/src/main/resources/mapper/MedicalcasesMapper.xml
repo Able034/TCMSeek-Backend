@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.MedicalcasesMapper">
+    <resultMap id="MedicalcasesResult" type="com.tcmseek.pojo.entity.medicalCases">
+        <id property="id" column="id"/>
+        <result property="medCaseId" column="med_case_id"/>
+        <result property="caseReport" column="case_report"/>
+        <result property="physician" column="physician"/>
+        <result property="tcmDisease" column="tcm_disease"/>
+        <result property="wmDisease" column="wm_disease"/>
+        <result property="tcmSymptoms" column="tcm_symptoms"/>
+        <result property="wmSymptoms" column="wm_symptoms"/>
+        <result property="urinationDefecation" column="urination_defecation"/>
+        <result property="pulseCondition" column="pulse_condition"/>
+        <result property="tongueAppearance" column="tongue_appearance"/>
+        <result property="tcmSyndrome" column="tcm_syndrome"/>
+        <result property="tcmTreatment" column="tcm_treatment"/>
+        <result property="prescription" column="prescription"/>
+        <result property="herbComposition" column="herb_composition"/>
+    </resultMap>
+
+    <select id="selectMedicalCasesByHerbId" resultMap="MedicalcasesResult">
+       SELECT
+           id,
+           med_case_id,
+           case_report,
+           physician,
+           tcm_disease,
+           wm_disease,
+           tcm_symptoms,
+           wm_symptoms,
+           urination_defecation,
+           pulse_condition,
+           tongue_appearance,
+           tcm_syndrome,
+           tcm_treatment,
+           prescription,
+           herb_composition
+       FROM medical_cases mc
+       WHERE EXISTS(
+           SELECT 1 FROM medical_case_herb_rel mchr
+           WHERE mchr.med_case_id = mc.med_case_id
+             AND mchr.tcm_herb_id = #{herbId}
+       )
+           ORDER BY mc.id ASC
+    </select>
+
+
+</mapper>

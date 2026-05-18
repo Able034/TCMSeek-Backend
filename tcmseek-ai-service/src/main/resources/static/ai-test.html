@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCMSeek AI Test Console</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --line: #d9e1ea;
+      --text: #17202a;
+      --muted: #687789;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --warn: #b7791f;
+      --danger: #b42318;
+      --code: #0f172a;
+      --soft: #eef6f5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .main {
+      min-width: 0;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 38px;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: var(--muted);
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .status.ok .dot {
+      background: var(--accent);
+    }
+
+    .status.error .dot {
+      background: var(--danger);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input {
+      height: 38px;
+      padding: 0 10px;
+    }
+
+    textarea {
+      min-height: 132px;
+      resize: vertical;
+      padding: 10px;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, .14);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 6px;
+      min-height: 38px;
+      padding: 0 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      border-color: #b8c5d3;
+      background: #fafafa;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-strong);
+    }
+
+    .btn:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    .preset-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .preset {
+      width: 100%;
+      min-height: 34px;
+      justify-content: flex-start;
+      text-align: left;
+      white-space: normal;
+      padding: 8px 10px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .metric,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .metric {
+      min-height: 72px;
+      padding: 12px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .metric .value {
+      margin-top: 4px;
+      font-size: 22px;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .panel {
+      overflow: hidden;
+    }
+
+    .panel-header {
+      min-height: 42px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .panel-body {
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .reply {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      min-height: 120px;
+      max-height: 360px;
+      overflow: auto;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      min-height: 32px;
+      padding: 0 10px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .tab.active {
+      color: var(--accent-strong);
+      border-color: rgba(15, 118, 110, .45);
+      background: var(--soft);
+      font-weight: 700;
+    }
+
+    .json,
+    .table-wrap {
+      max-height: 430px;
+      overflow: auto;
+    }
+
+    .graph-preview {
+      display: grid;
+      gap: 10px;
+    }
+
+    .graph-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .graph-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      min-height: 28px;
+      padding: 0 8px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .graph-canvas {
+      width: 100%;
+      min-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      overflow: hidden;
+    }
+
+    .graph-svg {
+      display: block;
+      width: 100%;
+      height: 420px;
+    }
+
+    .graph-edge {
+      stroke: #aab7c4;
+      stroke-width: 1.4;
+      stroke-opacity: .85;
+    }
+
+    .graph-node circle {
+      stroke: #fff;
+      stroke-width: 2;
+    }
+
+    .graph-node text {
+      fill: #1f2937;
+      font-size: 11px;
+      paint-order: stroke;
+      stroke: #fbfdff;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .graph-json {
+      display: grid;
+      gap: 8px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      background: var(--code);
+      color: #d9e7ff;
+      border-radius: 6px;
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      background: #f8fafc;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .csv-link {
+      color: var(--accent-strong);
+      font-weight: 700;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    .csv-link:hover {
+      text-decoration: underline;
+    }
+
+    .empty {
+      color: var(--muted);
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    .error-box {
+      border: 1px solid rgba(180, 35, 24, .35);
+      background: #fff4f2;
+      color: var(--danger);
+      border-radius: 6px;
+      padding: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .sidebar,
+      .main {
+        padding: 12px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="topbar">
+      <div class="brand">
+        <h1>TCMSeek AI Test</h1>
+        <p>Neo4j tools · DeepSeek · CSV</p>
+      </div>
+      <div id="status" class="status">
+        <span class="dot"></span>
+        <span id="statusText">Ready</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="endpoint">Endpoint</label>
+      <input id="endpoint" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="sessionId">Session ID</label>
+      <input id="sessionId" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="question">Question</label>
+      <textarea id="question">人参包含哪些化合物？</textarea>
+    </div>
+
+    <div class="actions">
+      <button id="sendBtn" class="btn primary" type="button">Send</button>
+      <button id="clearBtn" class="btn" type="button">Clear</button>
+    </div>
+
+    <div class="field">
+      <label>Samples</label>
+      <div id="presetGrid" class="preset-grid"></div>
+    </div>
+
+    <div class="footer-note">
+      Response items are expected to be compressed to 20 rows when the result set is large.
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="summary-grid">
+      <div class="metric">
+        <div class="label">Total</div>
+        <div id="totalValue" class="value">-</div>
+      </div>
+      <div class="metric">
+        <div class="label">Displayed</div>
+        <div id="displayedValue" class="value">-</div>
+      </div>
+      <div class="metric">
+        <div class="label">Tool</div>
+        <div id="toolValue" class="value">-</div>
+      </div>
+      <div class="metric">
+        <div class="label">Latency</div>
+        <div id="latencyValue" class="value">-</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Reply</div>
+        <a id="csvLink" class="csv-link" href="#" target="_blank" rel="noreferrer"></a>
+      </div>
+      <div class="panel-body">
+        <div id="errorBox" class="error-box" hidden></div>
+        <div id="reply" class="reply empty">No response</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Result</div>
+        <div class="tabs">
+          <button class="tab active" type="button" data-tab="items">Items</button>
+          <button class="tab" type="button" data-tab="tools">Tools</button>
+          <button class="tab" type="button" data-tab="graph">Graph</button>
+          <button class="tab" type="button" data-tab="raw">Raw</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="itemsPane" class="tab-pane"></div>
+        <div id="toolsPane" class="tab-pane" hidden></div>
+        <div id="graphPane" class="tab-pane" hidden></div>
+        <div id="rawPane" class="tab-pane" hidden></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const samples = [
+    "人参包含哪些化合物？",
+    "糖尿病有哪些靶点？",
+    "人参和黄芪有什么共同靶点？",
+    "人参治啥？",
+    "哪些中药治疗糖尿病？",
+    "治疗糖尿病的方剂有哪些？",
+    "六味地黄丸由什么组成？"
+  ];
+
+  const endpointInput = document.getElementById("endpoint");
+  const sessionInput = document.getElementById("sessionId");
+  const questionInput = document.getElementById("question");
+  const sendBtn = document.getElementById("sendBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const status = document.getElementById("status");
+  const statusText = document.getElementById("statusText");
+  const replyEl = document.getElementById("reply");
+  const errorBox = document.getElementById("errorBox");
+  const csvLink = document.getElementById("csvLink");
+  const totalValue = document.getElementById("totalValue");
+  const displayedValue = document.getElementById("displayedValue");
+  const toolValue = document.getElementById("toolValue");
+  const latencyValue = document.getElementById("latencyValue");
+  const itemsPane = document.getElementById("itemsPane");
+  const toolsPane = document.getElementById("toolsPane");
+  const graphPane = document.getElementById("graphPane");
+  const rawPane = document.getElementById("rawPane");
+
+  endpointInput.value = localStorage.getItem("tcmseek-ai-endpoint") || defaultEndpoint();
+  sessionInput.value = localStorage.getItem("tcmseek-ai-session") || `web-${Date.now()}`;
+
+  initPresets();
+  initTabs();
+
+  sendBtn.addEventListener("click", sendQuestion);
+  clearBtn.addEventListener("click", clearResponse);
+  endpointInput.addEventListener("change", () => localStorage.setItem("tcmseek-ai-endpoint", endpointInput.value.trim()));
+  sessionInput.addEventListener("change", () => localStorage.setItem("tcmseek-ai-session", sessionInput.value.trim()));
+  questionInput.addEventListener("keydown", (event) => {
+    if (event.ctrlKey && event.key === "Enter") {
+      sendQuestion();
+    }
+  });
+
+  function defaultEndpoint() {
+    if (location.protocol === "http:" || location.protocol === "https:") {
+      return `${location.origin}/ai/aichat`;
+    }
+    return "http://localhost:8088/ai/aichat";
+  }
+
+  function initPresets() {
+    const grid = document.getElementById("presetGrid");
+    samples.forEach((sample) => {
+      const button = document.createElement("button");
+      button.className = "btn preset";
+      button.type = "button";
+      button.textContent = sample;
+      button.addEventListener("click", () => {
+        questionInput.value = sample;
+        questionInput.focus();
+      });
+      grid.appendChild(button);
+    });
+  }
+
+  function initTabs() {
+    document.querySelectorAll(".tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+        button.classList.add("active");
+        const active = button.dataset.tab;
+        itemsPane.hidden = active !== "items";
+        toolsPane.hidden = active !== "tools";
+        graphPane.hidden = active !== "graph";
+        rawPane.hidden = active !== "raw";
+      });
+    });
+  }
+
+  async function sendQuestion() {
+    const endpoint = endpointInput.value.trim();
+    const sessionId = sessionInput.value.trim() || `web-${Date.now()}`;
+    const question = questionInput.value.trim();
+    if (!endpoint || !question) {
+      showError("Endpoint and question are required.");
+      return;
+    }
+
+    localStorage.setItem("tcmseek-ai-endpoint", endpoint);
+    localStorage.setItem("tcmseek-ai-session", sessionId);
+    setStatus("loading", "Sending");
+    sendBtn.disabled = true;
+    clearError();
+    const startedAt = performance.now();
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        body: JSON.stringify({
+          sessionId,
+          messages: [
+            {
+              role: "user",
+              content: question
+            }
+          ]
+        })
+      });
+
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        throw new Error(text || response.statusText);
+      }
+      if (!response.ok) {
+        throw new Error(data.message || data.error || response.statusText);
+      }
+
+      const latency = Math.round(performance.now() - startedAt);
+      renderResponse(data, latency);
+      setStatus("ok", "OK");
+    } catch (error) {
+      showError(error.message || String(error));
+      setStatus("error", "Error");
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  function renderResponse(data, latency) {
+    replyEl.classList.remove("empty");
+    replyEl.textContent = data.reply || "";
+    totalValue.textContent = formatValue(data.totalResults ?? firstToolTotal(data) ?? "-");
+    displayedValue.textContent = formatValue(data.displayedResults ?? firstToolDisplayed(data) ?? "-");
+    toolValue.textContent = firstToolName(data) || "-";
+    latencyValue.textContent = `${latency} ms`;
+
+    if (data.csvDownloadUrl) {
+      csvLink.textContent = "Download CSV";
+      csvLink.href = absoluteUrl(data.csvDownloadUrl);
+      csvLink.hidden = false;
+    } else {
+      csvLink.textContent = "";
+      csvLink.removeAttribute("href");
+      csvLink.hidden = true;
+    }
+
+    renderItems(data);
+    renderJson(toolsPane, data.toolResults || []);
+    renderGraph(graphPane, data.graph || null);
+    renderJson(rawPane, data);
+  }
+
+  function renderItems(data) {
+    const items = firstItems(data);
+    if (!items.length) {
+      itemsPane.innerHTML = '<div class="empty">No items</div>';
+      return;
+    }
+    const keys = collectKeys(items);
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const trHead = document.createElement("tr");
+    keys.forEach((key) => {
+      const th = document.createElement("th");
+      th.textContent = key;
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    items.forEach((item) => {
+      const tr = document.createElement("tr");
+      keys.forEach((key) => {
+        const td = document.createElement("td");
+        td.textContent = formatCell(item[key]);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    wrap.appendChild(table);
+    itemsPane.replaceChildren(wrap);
+  }
+
+  function renderJson(container, value) {
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(value, null, 2);
+    const wrap = document.createElement("div");
+    wrap.className = "json";
+    wrap.appendChild(pre);
+    container.replaceChildren(wrap);
+  }
+
+  function renderGraph(container, graph) {
+    if (!graph || !Array.isArray(graph.nodes) || !graph.nodes.length) {
+      container.innerHTML = '<div class="empty">No graph data</div>';
+      return;
+    }
+
+    const visibleNodes = graph.nodes.slice(0, 30);
+    const visibleIds = new Set(visibleNodes.map((node) => node.id));
+    const visibleEdges = (graph.edges || [])
+      .filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target))
+      .slice(0, 80);
+    const positions = layoutGraph(visibleNodes, visibleEdges);
+
+    const preview = document.createElement("div");
+    preview.className = "graph-preview";
+
+    const meta = document.createElement("div");
+    meta.className = "graph-meta";
+    meta.appendChild(chip(`Nodes ${visibleNodes.length}/${graph.nodes.length}`));
+    meta.appendChild(chip(`Edges ${visibleEdges.length}/${(graph.edges || []).length}`));
+    if (graph.mainName) {
+      meta.appendChild(chip(`Main ${graph.mainName}`));
+    }
+    renderLegend(meta, visibleNodes);
+    preview.appendChild(meta);
+
+    const canvas = document.createElement("div");
+    canvas.className = "graph-canvas";
+    canvas.appendChild(buildSvg(visibleNodes, visibleEdges, positions));
+    preview.appendChild(canvas);
+
+    const jsonBlock = document.createElement("div");
+    jsonBlock.className = "graph-json";
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(graph, null, 2);
+    jsonBlock.appendChild(pre);
+    preview.appendChild(jsonBlock);
+
+    container.replaceChildren(preview);
+  }
+
+  function chip(text) {
+    const element = document.createElement("span");
+    element.className = "graph-chip";
+    element.textContent = text;
+    return element;
+  }
+
+  function renderLegend(container, nodes) {
+    const types = [...new Set(nodes.map((node) => node.type || "entity"))].slice(0, 8);
+    types.forEach((type) => {
+      const item = document.createElement("span");
+      item.className = "graph-chip";
+      const dot = document.createElement("span");
+      dot.className = "legend-dot";
+      dot.style.background = colorForType(type);
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(type));
+      container.appendChild(item);
+    });
+  }
+
+  function buildSvg(nodes, edges, positions) {
+    const width = 900;
+    const height = 420;
+    const svg = svgElement("svg", {
+      class: "graph-svg",
+      viewBox: `0 0 ${width} ${height}`,
+      role: "img",
+      "aria-label": "Graph preview"
+    });
+
+    const defs = svgElement("defs");
+    const marker = svgElement("marker", {
+      id: "arrow",
+      markerWidth: "8",
+      markerHeight: "8",
+      refX: "6",
+      refY: "3",
+      orient: "auto",
+      markerUnits: "strokeWidth"
+    });
+    marker.appendChild(svgElement("path", {
+      d: "M0,0 L0,6 L7,3 z",
+      fill: "#aab7c4"
+    }));
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    const edgeLayer = svgElement("g");
+    edges.forEach((edge) => {
+      const source = positions.get(edge.source);
+      const target = positions.get(edge.target);
+      if (!source || !target) {
+        return;
+      }
+      const line = svgElement("line", {
+        class: "graph-edge",
+        x1: source.x,
+        y1: source.y,
+        x2: target.x,
+        y2: target.y,
+        "marker-end": "url(#arrow)"
+      });
+      edgeLayer.appendChild(line);
+    });
+    svg.appendChild(edgeLayer);
+
+    const nodeLayer = svgElement("g");
+    nodes.forEach((node, index) => {
+      const position = positions.get(node.id);
+      if (!position) {
+        return;
+      }
+      const group = svgElement("g", {
+        class: "graph-node",
+        transform: `translate(${position.x}, ${position.y})`
+      });
+      const radius = index === 0 ? 20 : 15;
+      group.appendChild(svgElement("circle", {
+        r: radius,
+        fill: colorForType(node.type)
+      }));
+      const title = svgElement("title");
+      title.textContent = `${node.label || node.id} (${node.type || "entity"})`;
+      group.appendChild(title);
+      const text = svgElement("text", {
+        x: 0,
+        y: radius + 15,
+        "text-anchor": "middle"
+      });
+      text.textContent = shortLabel(node.label || node.id);
+      group.appendChild(text);
+      nodeLayer.appendChild(group);
+    });
+    svg.appendChild(nodeLayer);
+    return svg;
+  }
+
+  function layoutGraph(nodes, edges) {
+    const width = 900;
+    const height = 420;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const positions = new Map();
+    if (!nodes.length) {
+      return positions;
+    }
+
+    const important = findImportantNode(nodes, edges);
+    positions.set(important.id, { x: centerX, y: centerY });
+    const rest = nodes.filter((node) => node.id !== important.id);
+    const radiusX = Math.min(340, Math.max(150, 115 + rest.length * 8));
+    const radiusY = 145;
+    rest.forEach((node, index) => {
+      const angle = (Math.PI * 2 * index) / Math.max(rest.length, 1) - Math.PI / 2;
+      const ring = index % 2 === 0 ? 1 : .78;
+      positions.set(node.id, {
+        x: centerX + Math.cos(angle) * radiusX * ring,
+        y: centerY + Math.sin(angle) * radiusY * ring
+      });
+    });
+    return positions;
+  }
+
+  function findImportantNode(nodes, edges) {
+    const preferred = nodes.find((node) => ["herb", "prescription", "disease", "compound", "pathway", "syndrome"].includes(node.type));
+    if (preferred) {
+      return preferred;
+    }
+    const degree = new Map();
+    edges.forEach((edge) => {
+      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+    });
+    return nodes
+      .slice()
+      .sort((a, b) => (degree.get(b.id) || 0) - (degree.get(a.id) || 0))[0];
+  }
+
+  function svgElement(name, attributes = {}) {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.entries(attributes).forEach(([key, value]) => {
+      element.setAttribute(key, value);
+    });
+    return element;
+  }
+
+  function colorForType(type) {
+    const colors = {
+      herb: "#0f766e",
+      compound: "#2563eb",
+      target: "#7c3aed",
+      disease: "#dc2626",
+      prescription: "#b7791f",
+      symptom: "#0891b2",
+      syndrome: "#9333ea",
+      pathway: "#4d7c0f",
+      medicalcase: "#475569",
+      entity: "#64748b"
+    };
+    return colors[(type || "entity").toLowerCase()] || colors.entity;
+  }
+
+  function shortLabel(label) {
+    const value = String(label || "");
+    return value.length > 18 ? `${value.slice(0, 17)}...` : value;
+  }
+
+  function firstItems(data) {
+    const results = data.toolResults || [];
+    for (const tool of results) {
+      const items = tool?.result?.items;
+      if (Array.isArray(items)) {
+        return items;
+      }
+    }
+    return [];
+  }
+
+  function firstToolName(data) {
+    return data.toolResults?.[0]?.toolName || "";
+  }
+
+  function firstToolTotal(data) {
+    return data.toolResults?.[0]?.result?.total;
+  }
+
+  function firstToolDisplayed(data) {
+    return data.toolResults?.[0]?.result?.items?.length;
+  }
+
+  function collectKeys(items) {
+    const keys = [];
+    items.forEach((item) => {
+      Object.keys(item || {}).forEach((key) => {
+        if (!keys.includes(key)) {
+          keys.push(key);
+        }
+      });
+    });
+    return keys;
+  }
+
+  function formatCell(value) {
+    if (value == null) {
+      return "";
+    }
+    if (Array.isArray(value)) {
+      return value.join(", ");
+    }
+    if (typeof value === "object") {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  }
+
+  function formatValue(value) {
+    return typeof value === "number" ? value.toLocaleString("zh-CN") : value;
+  }
+
+  function absoluteUrl(path) {
+    if (/^https?:\/\//i.test(path)) {
+      return path;
+    }
+    const endpoint = new URL(endpointInput.value.trim(), location.href);
+    return `${endpoint.origin}${path}`;
+  }
+
+  function showError(message) {
+    errorBox.hidden = false;
+    errorBox.textContent = message;
+  }
+
+  function clearError() {
+    errorBox.hidden = true;
+    errorBox.textContent = "";
+  }
+
+  function clearResponse() {
+    clearError();
+    replyEl.classList.add("empty");
+    replyEl.textContent = "No response";
+    totalValue.textContent = "-";
+    displayedValue.textContent = "-";
+    toolValue.textContent = "-";
+    latencyValue.textContent = "-";
+    csvLink.textContent = "";
+    csvLink.hidden = true;
+    itemsPane.innerHTML = '<div class="empty">No items</div>';
+    renderJson(toolsPane, []);
+    renderGraph(graphPane, null);
+    renderJson(rawPane, null);
+    setStatus("", "Ready");
+  }
+
+  function setStatus(kind, text) {
+    status.className = `status ${kind || ""}`.trim();
+    statusText.textContent = text;
+  }
+
+  clearResponse();
+</script>
+</body>
+</html>

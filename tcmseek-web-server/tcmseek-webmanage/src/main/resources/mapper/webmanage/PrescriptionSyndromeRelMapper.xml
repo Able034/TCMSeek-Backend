@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.PrescriptionSyndromeRelMapper">
+    
+    <resultMap type="PrescriptionSyndromeRel" id="PrescriptionSyndromeRelResult">
+        <result property="id"    column="id"    />
+        <result property="prescriptionName"    column="prescription_name"    />
+        <result property="tcmPrescriptionId"    column="tcm_prescription_id"    />
+        <result property="tcmSyndromeId"    column="tcm_syndrome_id"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectPrescriptionSyndromeRelVo">
+        select id, prescription_name, tcm_prescription_id, tcm_syndrome_id, created_at from prescription_syndrome_rel
+    </sql>
+
+    <select id="selectPrescriptionSyndromeRelList" parameterType="PrescriptionSyndromeRel" resultMap="PrescriptionSyndromeRelResult">
+        <include refid="selectPrescriptionSyndromeRelVo"/>
+        <where>  
+            <if test="prescriptionName != null  and prescriptionName != ''"> and prescription_name like concat('%', #{prescriptionName}, '%')</if>
+            <if test="tcmPrescriptionId != null  and tcmPrescriptionId != ''"> and tcm_prescription_id = #{tcmPrescriptionId}</if>
+            <if test="tcmSyndromeId != null  and tcmSyndromeId != ''"> and tcm_syndrome_id = #{tcmSyndromeId}</if>
+        </where>
+    </select>
+    
+    <select id="selectPrescriptionSyndromeRelById" parameterType="Long" resultMap="PrescriptionSyndromeRelResult">
+        <include refid="selectPrescriptionSyndromeRelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertPrescriptionSyndromeRel" parameterType="PrescriptionSyndromeRel" useGeneratedKeys="true" keyProperty="id">
+        insert into prescription_syndrome_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="prescriptionName != null">prescription_name,</if>
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id,</if>
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">tcm_syndrome_id,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="prescriptionName != null">#{prescriptionName},</if>
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">#{tcmPrescriptionId},</if>
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">#{tcmSyndromeId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updatePrescriptionSyndromeRel" parameterType="PrescriptionSyndromeRel">
+        update prescription_syndrome_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="prescriptionName != null">prescription_name = #{prescriptionName},</if>
+            <if test="tcmPrescriptionId != null and tcmPrescriptionId != ''">tcm_prescription_id = #{tcmPrescriptionId},</if>
+            <if test="tcmSyndromeId != null and tcmSyndromeId != ''">tcm_syndrome_id = #{tcmSyndromeId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deletePrescriptionSyndromeRelById" parameterType="Long">
+        delete from prescription_syndrome_rel where id = #{id}
+    </delete>
+
+    <delete id="deletePrescriptionSyndromeRelByIds" parameterType="String">
+        delete from prescription_syndrome_rel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

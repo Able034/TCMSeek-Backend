@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.CompoundTargetRelMapper">
+    
+    <resultMap type="CompoundTargetRel" id="CompoundTargetRelResult">
+        <result property="id"    column="id"    />
+        <result property="inchikey"    column="inchikey"    />
+        <result property="tcmTarId"    column="tcm_tar_id"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectCompoundTargetRelVo">
+        select id, inchikey, tcm_tar_id, source, created_at from compound_target_rel
+    </sql>
+
+    <select id="selectCompoundTargetRelList" parameterType="CompoundTargetRel" resultMap="CompoundTargetRelResult">
+        <include refid="selectCompoundTargetRelVo"/>
+        <where>  
+            <if test="inchikey != null  and inchikey != ''"> and inchikey = #{inchikey}</if>
+            <if test="tcmTarId != null  and tcmTarId != ''"> and tcm_tar_id = #{tcmTarId}</if>
+        </where>
+    </select>
+    
+    <select id="selectCompoundTargetRelById" parameterType="Long" resultMap="CompoundTargetRelResult">
+        <include refid="selectCompoundTargetRelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCompoundTargetRel" parameterType="CompoundTargetRel" useGeneratedKeys="true" keyProperty="id">
+        insert into compound_target_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey,</if>
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">#{inchikey},</if>
+            <if test="tcmTarId != null and tcmTarId != ''">#{tcmTarId},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCompoundTargetRel" parameterType="CompoundTargetRel">
+        update compound_target_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey = #{inchikey},</if>
+            <if test="tcmTarId != null and tcmTarId != ''">tcm_tar_id = #{tcmTarId},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCompoundTargetRelById" parameterType="Long">
+        delete from compound_target_rel where id = #{id}
+    </delete>
+
+    <delete id="deleteCompoundTargetRelByIds" parameterType="String">
+        delete from compound_target_rel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectByCompositeKeys" parameterType="java.util.List" resultMap="CompoundTargetRelResult">
+        <include refid="selectCompoundTargetRelVo"/>
+        <where>
+            concat(inchikey, '_', tcm_tar_id) in
+            <foreach collection="keys" item="key" open="(" separator="," close=")">
+                #{key}
+            </foreach>
+        </where>
+    </select>
+
+    <insert id="batchInsertCompoundTargetRel" parameterType="java.util.List">
+        insert into compound_target_rel (inchikey, tcm_tar_id, source, created_at)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.inchikey}, #{item.tcmTarId}, #{item.source}, #{item.createdAt})
+        </foreach>
+    </insert>
+</mapper>

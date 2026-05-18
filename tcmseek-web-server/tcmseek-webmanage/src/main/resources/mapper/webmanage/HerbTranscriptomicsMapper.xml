@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.HerbTranscriptomicsMapper">
+    
+    <resultMap type="HerbTranscriptomics" id="HerbTranscriptomicsResult">
+        <result property="id"    column="id"    />
+        <result property="tcmHerbId"    column="tcm_herb_id"    />
+        <result property="geneName"    column="gene_name"    />
+        <result property="log2FcAvg"    column="log2_fc_avg"    />
+        <result property="pValue"    column="p_value"    />
+        <result property="direction"    column="direction"    />
+        <result property="source"    column="source"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectHerbTranscriptomicsVo">
+        select id, tcm_herb_id, gene_name, log2_fc_avg, p_value, direction, source, created_at from herb_transcriptomics
+    </sql>
+
+    <select id="selectHerbTranscriptomicsList" parameterType="HerbTranscriptomics" resultMap="HerbTranscriptomicsResult">
+        <include refid="selectHerbTranscriptomicsVo"/>
+        <where>  
+            <if test="tcmHerbId != null  and tcmHerbId != ''"> and tcm_herb_id = #{tcmHerbId}</if>
+            <if test="geneName != null  and geneName != ''"> and gene_name like concat('%', #{geneName}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectHerbTranscriptomicsById" parameterType="Long" resultMap="HerbTranscriptomicsResult">
+        <include refid="selectHerbTranscriptomicsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertHerbTranscriptomics" parameterType="HerbTranscriptomics" useGeneratedKeys="true" keyProperty="id">
+        insert into herb_transcriptomics
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">tcm_herb_id,</if>
+            <if test="geneName != null and geneName != ''">gene_name,</if>
+            <if test="log2FcAvg != null">log2_fc_avg,</if>
+            <if test="pValue != null">p_value,</if>
+            <if test="direction != null">direction,</if>
+            <if test="source != null">source,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">#{tcmHerbId},</if>
+            <if test="geneName != null and geneName != ''">#{geneName},</if>
+            <if test="log2FcAvg != null">#{log2FcAvg},</if>
+            <if test="pValue != null">#{pValue},</if>
+            <if test="direction != null">#{direction},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateHerbTranscriptomics" parameterType="HerbTranscriptomics">
+        update herb_transcriptomics
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmHerbId != null and tcmHerbId != ''">tcm_herb_id = #{tcmHerbId},</if>
+            <if test="geneName != null and geneName != ''">gene_name = #{geneName},</if>
+            <if test="log2FcAvg != null">log2_fc_avg = #{log2FcAvg},</if>
+            <if test="pValue != null">p_value = #{pValue},</if>
+            <if test="direction != null">direction = #{direction},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteHerbTranscriptomicsById" parameterType="Long">
+        delete from herb_transcriptomics where id = #{id}
+    </delete>
+
+    <delete id="deleteHerbTranscriptomicsByIds" parameterType="String">
+        delete from herb_transcriptomics where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

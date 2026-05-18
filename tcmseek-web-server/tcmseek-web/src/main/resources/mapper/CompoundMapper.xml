@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.CompoundMapper">
+
+    <resultMap id="CompoundResult" type="com.tcmseek.pojo.entity.TcmCompound">
+        <id property="id" column="id"/>
+        <result property="inchikey" column="inchikey"/>
+        <result property="canonicalSmiles" column="canonical_smiles"/>
+        <result property="pubchemCid" column="pubchem_cid"/>
+        <result property="molecularFormula" column="molecular_formula"/>
+        <result property="molecularWeight" column="molecular_weight"/>
+        <result property="exactMass" column="exact_mass"/>
+        <result property="heavyAtomCount" column="heavy_atom_count"/>
+        <result property="numAtoms" column="num_atoms"/>
+        <result property="numBonds" column="num_bonds"/>
+        <result property="numRings" column="num_rings"/>
+        <result property="hBondDonors" column="h_bond_donors"/>
+        <result property="hBondAcceptors" column="h_bond_acceptors"/>
+        <result property="logp" column="logp"/>
+        <result property="tpsa" column="tpsa"/>
+        <result property="rotatableBonds" column="rotatable_bonds"/>
+        <result property="fractionCsp3" column="fraction_csp3"/>
+        <result property="compoundName" column="compound_name"/>
+    </resultMap>
+
+    <!-- 查询化合物列表 -->
+    <select id="selectCompoundsList" resultMap="CompoundResult">
+        SELECT
+            id,
+            inchikey,
+            canonical_smiles,
+            pubchem_cid,
+            molecular_formula,
+            molecular_weight,
+            exact_mass,
+            heavy_atom_count,
+            num_atoms,
+            num_bonds,
+            num_rings,
+            h_bond_donors,
+            h_bond_acceptors,
+            logp,
+            tpsa,
+            rotatable_bonds,
+            fraction_csp3,
+            compound_name
+        FROM tcm_compounds
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (inchikey LIKE CONCAT('%', #{keyword}, '%')
+                OR molecular_formula LIKE CONCAT('%', #{keyword}, '%')
+                OR canonical_smiles LIKE CONCAT('%', #{keyword}, '%')
+                OR compound_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 根据中药ID查询化合物列表 -->
+    <select id="selectCompoundsByHerbId" resultMap="CompoundResult">
+        SELECT
+            c.id,
+            c.inchikey,
+            c.canonical_smiles,
+            c.pubchem_cid,
+            c.molecular_formula,
+            c.molecular_weight,
+            c.exact_mass,
+            c.heavy_atom_count,
+            c.num_atoms,
+            c.num_bonds,
+            c.num_rings,
+            c.h_bond_donors,
+            c.h_bond_acceptors,
+            c.logp,
+            c.tpsa,
+            c.rotatable_bonds,
+            c.fraction_csp3,
+            c.compound_name
+        FROM tcm_compounds c
+        INNER JOIN herb_compound_rel hc ON c.inchikey = hc.inchikey
+        WHERE hc.tcm_herb_id = #{tcmHerbId}
+        ORDER BY c.id ASC
+    </select>
+
+    <!-- 根据InChIKey查询化合物详情 -->
+    <select id="selectCompoundByInchikey" resultMap="CompoundResult">
+        SELECT
+            id,
+            inchikey,
+            canonical_smiles,
+            pubchem_cid,
+            molecular_formula,
+            molecular_weight,
+            exact_mass,
+            heavy_atom_count,
+            num_atoms,
+            num_bonds,
+            num_rings,
+            h_bond_donors,
+            h_bond_acceptors,
+            logp,
+            tpsa,
+            rotatable_bonds,
+            fraction_csp3,
+            compound_name
+        FROM tcm_compounds
+        WHERE inchikey = #{inchikey}
+    </select>
+
+    <!-- 查询化合物的靶标列表 -->
+    <select id="selectTargetsByInchikey" resultType="com.tcmseek.pojo.entity.Target">
+        SELECT
+            t.id,
+            t.tcm_tar_id AS tcmTarId,
+            t.gene_entrez_id AS geneEntrezId,
+            t.symbol,
+            t.uniprot_id AS uniprotId,
+            t.ensembl_id AS ensemblId,
+            t.description,
+            t.type_of_gene AS typeOfGene
+        FROM targets t
+        INNER JOIN compound_target_rel ct ON t.tcm_tar_id = ct.tcm_tar_id
+        WHERE ct.inchikey = #{inchikey}
+        ORDER BY t.id ASC
+    </select>
+
+    <!-- 查询化合物的ADMET性质 -->
+    <select id="selectAdmetByInchikey" resultType="com.tcmseek.pojo.entity.CompoundAdmet">
+        SELECT
+            id,
+            inchikey,
+            ames,
+            bbbp,
+            bioavailability,
+            caco2,
+            carcinogens,
+            clearance_microsome AS clearanceMicrosome,
+            clintox,
+            cyp1a2_inhibition AS cyp1a2Inhibition,
+            cyp2c19_inhibition AS cyp2c19Inhibition,
+            cyp2c9_inhibition AS cyp2c9Inhibition,
+            cyp2c9_substrate AS cyp2c9Substrate,
+            cyp2d6_inhibition AS cyp2d6Inhibition,
+            cyp2d6_substrate AS cyp2d6Substrate,
+            cyp3a4_inhibition AS cyp3a4Inhibition,
+            cyp3a4_substrate AS cyp3a4Substrate,
+            dili,
+            freesolv,
+            herg_blockers AS hergBlockers,
+            herg_karim AS hergKarim,
+            hia,
+            ld50,
+            lipophilicity,
+            pampa,
+            pgp,
+            ppbr,
+            skin,
+            solubility
+        FROM compound_admet
+        WHERE inchikey = #{inchikey}
+    </select>
+    <select id="getAllCompounds" resultType="com.tcmseek.pojo.vo.TcmCompoundD3">
+        SELECT
+            c.id,
+            c.inchikey,
+            c.molecular_formula AS molecularFormula
+        FROM tcm_compounds c
+        INNER JOIN herb_compound_rel hc ON c.inchikey = hc.inchikey
+        WHERE hc.tcm_herb_id = #{herbId}
+        ORDER BY c.id ASC
+    </select>
+    <select id="getAllTargets" resultType="com.tcmseek.pojo.vo.TargetD3VO">
+        SELECT
+            t.id,
+            t.symbol,
+            t.gene_entrez_id AS geneEntrezId,
+            t.uniprot_id AS uniprotId,
+            t.description
+        FROM targets t
+        INNER JOIN compound_target_rel ct ON t.tcm_tar_id = ct.tcm_tar_id
+        WHERE ct.inchikey = #{inchikey}
+        ORDER BY t.id ASC
+    </select>
+
+    <!-- 批量获取多个化合物的靶标信息 -->
+    <select id="batchGetAllTargets" resultType="com.tcmseek.pojo.vo.TargetD3VO">
+        SELECT
+            req.inchikey,
+            t.symbol,
+            t.gene_entrez_id AS geneEntrezId,
+            t.uniprot_id AS uniprotId,
+            t.description
+        FROM (
+            SELECT DISTINCT params.inchikey
+            FROM (
+                <foreach collection="inchikeys" item="inchikey" separator=" UNION ALL ">
+                    SELECT #{inchikey} AS inchikey
+                </foreach>
+            ) params
+        ) req
+        INNER JOIN compound_target_rel ct ON ct.inchikey = req.inchikey
+        INNER JOIN targets t ON ct.tcm_tar_id = t.tcm_tar_id
+        ORDER BY req.inchikey, t.symbol ASC
+    </select>
+
+    <!-- 查询包含该化合物的中药材列表 -->
+    <select id="selectHerbsByInchikey" resultType="com.tcmseek.pojo.entity.coreTcmHerbs">
+        SELECT
+            h.id,
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            h.latin_name AS latinName,
+            h.english_name AS englishName,
+            h.type,
+            h.efficacy_zh AS efficacyZh,
+            h.function_en AS functionEn,
+            h.efficacy_category AS efficacyCategory
+        FROM core_tcm_herbs h
+        INNER JOIN herb_compound_rel hc ON h.tcm_herb_id = hc.tcm_herb_id
+        WHERE hc.inchikey = #{inchikey}
+        ORDER BY h.id ASC
+    </select>
+
+    <!-- 查询化合物的转录组学数据 -->
+    <select id="selectTranscriptomicsByInchikey" resultType="map">
+        SELECT
+            ct.id,
+            ct.inchikey,
+            ct.gen AS geneEntrezId,
+            ct.log2_fc_avg AS log2FcAvg,
+            ct.p_value AS pValue,
+            ct.direction,
+            ct.source,
+            CASE
+                WHEN  ct.p_value &lt; 0.06 THEN 'significant'
+                ELSE 'not_significant'
+            END AS significance,
+            CASE
+                WHEN ct.p_value  &lt; 0.002 THEN '***'
+                WHEN ct.p_value  &lt; 0.02 THEN '**'
+                WHEN ct.p_value  &lt; 0.06 THEN '*'
+                ELSE 'ns'
+            END AS significanceLabel
+        FROM compound_transcriptomics ct
+        WHERE ct.inchikey = #{inchikey}
+        ORDER BY ABS(ct.log2_fc_avg) DESC
+    </select>
+<!--    <select id="selectTranscriptomicsByInchikey" resultType="map">-->
+<!--        SELECT-->
+<!--            ct.id,-->
+<!--            ct.inchikey,-->
+<!--            ct.gene_entrez_id AS geneEntrezId,-->
+<!--            t.symbol AS geneSymbol,-->
+<!--            t.description AS geneDescription,-->
+<!--            ct.log2_fc_avg AS log2FcAvg,-->
+<!--            ct.p_value AS pValue,-->
+<!--            ct.direction,-->
+<!--            ct.source,-->
+<!--            CASE-->
+<!--                WHEN ABS(ct.log2_fc_avg) >= 1 AND ct.p_value &lt; 0.05 THEN 'significant'-->
+<!--                ELSE 'not_significant'-->
+<!--            END AS significance,-->
+<!--            CASE-->
+<!--                WHEN ct.p_value  &lt; 0.001 THEN '***'-->
+<!--                WHEN ct.p_value  &lt; 0.01 THEN '**'-->
+<!--                WHEN ct.p_value  &lt; 0.05 THEN '*'-->
+<!--                ELSE 'ns'-->
+<!--            END AS significanceLabel-->
+<!--        FROM compound_transcriptomics ct-->
+<!--        LEFT JOIN targets t ON ct.gene_entrez_id = t.gene_entrez_id-->
+<!--        WHERE ct.inchikey = #{inchikey}-->
+<!--        ORDER BY ABS(ct.log2_fc_avg) DESC-->
+<!--    </select>-->
+
+    <!-- 获取化合物转录组学统计信息 -->
+    <select id="getTranscriptomicsStatistics" resultType="map">
+        SELECT
+            COUNT(*) AS totalGenes,
+            SUM(CASE WHEN direction = 'up' THEN 1 ELSE 0 END) AS upregulatedGenes,
+            SUM(CASE WHEN direction = 'down' THEN 1 ELSE 0 END) AS downregulatedGenes,
+            SUM(CASE WHEN ABS(log2_fc_avg) >= 1 AND p_value  &lt; 0.05 THEN 1 ELSE 0 END) AS significantGenes,
+            SUM(CASE WHEN direction = 'up' AND ABS(log2_fc_avg) >= 1 AND p_value  &lt; 0.05 THEN 1 ELSE 0 END) AS significantUpregulated,
+            SUM(CASE WHEN direction = 'down' AND ABS(log2_fc_avg) >= 1 AND p_value  &lt; 0.05 THEN 1 ELSE 0 END) AS significantDownregulated,
+            MAX(ABS(log2_fc_avg)) AS maxAbsLog2Fc,
+            MIN(p_value) AS minPValue
+        FROM compound_transcriptomics
+        WHERE inchikey = #{inchikey}
+    </select>
+
+</mapper>

@@ -1,0 +1,130 @@
+# ---------------------------------------------------------------------------
+# Build outputs
+# ---------------------------------------------------------------------------
+target/
+build/
+out/
+dist/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven / Gradle
+.mvn/timing.properties
+.gradle/
+!.mvn/wrapper/maven-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---------------------------------------------------------------------------
+# IDE and editor files
+# ---------------------------------------------------------------------------
+.idea/
+*.iws
+*.iml
+*.ipr
+.classpath
+.factorypath
+.project
+.settings/
+.apt_generated/
+.springBeans
+.vscode/
+nbproject/private/
+.nb-gradle/
+
+# ---------------------------------------------------------------------------
+# Runtime logs and temporary files
+# ---------------------------------------------------------------------------
+logs/
+log/
+*.log
+*.pid
+*.hprof
+*.dump
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+*.xml.versionsBackup
+
+# ---------------------------------------------------------------------------
+# Local uploads, generated docs, and personal folders
+# ---------------------------------------------------------------------------
+docwork/
+中文实践论文/
+面试/
+uploads/
+uploadPath/
+uoloadPath/
+profile/
+data/
+export/
+exports/
+
+# ---------------------------------------------------------------------------
+# Secrets and local environment files
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.csr
+secrets/
+secret/
+
+# ---------------------------------------------------------------------------
+# Spring local configuration
+#
+# Real application*.yml files may contain local database passwords, Redis
+# credentials, Nacos namespaces, Neo4j passwords, or AI provider keys.
+# Commit only *-example.yml templates.
+# ---------------------------------------------------------------------------
+**/src/main/resources/application*.yml
+**/src/main/resources/application*.yaml
+**/src/main/resources/application*.properties
+**/src/main/resources/bootstrap*.yml
+**/src/main/resources/bootstrap*.yaml
+**/src/main/resources/bootstrap*.properties
+!**/src/main/resources/application*-example.yml
+!**/src/main/resources/application*-example.yaml
+!**/src/main/resources/application*-example.properties
+!**/src/main/resources/bootstrap*-example.yml
+!**/src/main/resources/bootstrap*-example.yaml
+!**/src/main/resources/bootstrap*-example.properties
+
+# Keep packaged resources out as part of target/, but make this explicit.
+**/target/classes/application*.yml
+**/target/classes/application*.yaml
+**/target/classes/application*.properties
+**/target/classes/bootstrap*.yml
+**/target/classes/bootstrap*.yaml
+**/target/classes/bootstrap*.properties
+
+# ---------------------------------------------------------------------------
+# Known sensitive or local-only project notes
+# ---------------------------------------------------------------------------
+README.md
+API_GATEWAY.md
+tcmseek-admin/docs/
+tcmseek-web/README.md
+tcmseek-web/TCM_AICHAT_API.md
+tcmseek-web/TCM-ex*.py
+
+# ---------------------------------------------------------------------------
+# OS metadata
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

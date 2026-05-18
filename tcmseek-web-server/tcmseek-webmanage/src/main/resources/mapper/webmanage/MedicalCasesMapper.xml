@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.MedicalCasesMapper">
+    
+    <resultMap type="MedicalCases" id="MedicalCasesResult">
+        <result property="id"    column="id"    />
+        <result property="medCaseId"    column="med_case_id"    />
+        <result property="caseReport"    column="case_report"    />
+        <result property="physician"    column="physician"    />
+        <result property="tcmDisease"    column="tcm_disease"    />
+        <result property="wmDisease"    column="wm_disease"    />
+        <result property="tcmSymptoms"    column="tcm_symptoms"    />
+        <result property="wmSymptoms"    column="wm_symptoms"    />
+        <result property="urinationDefecation"    column="urination_defecation"    />
+        <result property="pulseCondition"    column="pulse_condition"    />
+        <result property="tongueAppearance"    column="tongue_appearance"    />
+        <result property="tcmSyndrome"    column="tcm_syndrome"    />
+        <result property="tcmTreatment"    column="tcm_treatment"    />
+        <result property="prescription"    column="prescription"    />
+        <result property="herbComposition"    column="herb_composition"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectMedicalCasesVo">
+        select id, med_case_id, case_report, physician, tcm_disease, wm_disease, tcm_symptoms, wm_symptoms, urination_defecation, pulse_condition, tongue_appearance, tcm_syndrome, tcm_treatment, prescription, herb_composition, created_at, updated_at from medical_cases
+    </sql>
+
+    <select id="selectMedicalCasesList" parameterType="MedicalCases" resultMap="MedicalCasesResult">
+        <include refid="selectMedicalCasesVo"/>
+        <where>  
+            <if test="medCaseId != null  and medCaseId != ''"> and med_case_id = #{medCaseId}</if>
+            <if test="caseReport != null  and caseReport != ''"> and case_report like concat('%', #{caseReport}, '%')</if>
+            <if test="physician != null  and physician != ''"> and physician like concat('%', #{physician}, '%')</if>
+            <if test="tcmDisease != null  and tcmDisease != ''"> and tcm_disease like concat('%', #{tcmDisease}, '%')</if>
+            <if test="wmDisease != null  and wmDisease != ''"> and wm_disease like concat('%', #{wmDisease}, '%')</if>
+            <if test="tcmSymptoms != null  and tcmSymptoms != ''"> and tcm_symptoms like concat('%', #{tcmSymptoms}, '%')</if>
+            <if test="wmSymptoms != null  and wmSymptoms != ''"> and wm_symptoms like concat('%', #{wmSymptoms}, '%')</if>
+            <if test="urinationDefecation != null  and urinationDefecation != ''"> and urination_defecation like concat('%', #{urinationDefecation}, '%')</if>
+            <if test="pulseCondition != null  and pulseCondition != ''"> and pulse_condition like concat('%', #{pulseCondition}, '%')</if>
+            <if test="tongueAppearance != null  and tongueAppearance != ''"> and tongue_appearance like concat('%', #{tongueAppearance}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectMedicalCasesById" parameterType="Long" resultMap="MedicalCasesResult">
+        <include refid="selectMedicalCasesVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertMedicalCases" parameterType="MedicalCases" useGeneratedKeys="true" keyProperty="id">
+        insert into medical_cases
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="medCaseId != null and medCaseId != ''">med_case_id,</if>
+            <if test="caseReport != null and caseReport != ''">case_report,</if>
+            <if test="physician != null and physician != ''">physician,</if>
+            <if test="tcmDisease != null and tcmDisease != ''">tcm_disease,</if>
+            <if test="wmDisease != null and wmDisease != ''">wm_disease,</if>
+            <if test="tcmSymptoms != null and tcmSymptoms != ''">tcm_symptoms,</if>
+            <if test="wmSymptoms != null and wmSymptoms != ''">wm_symptoms,</if>
+            <if test="urinationDefecation != null and urinationDefecation != ''">urination_defecation,</if>
+            <if test="pulseCondition != null and pulseCondition != ''">pulse_condition,</if>
+            <if test="tongueAppearance != null and tongueAppearance != ''">tongue_appearance,</if>
+            <if test="tcmSyndrome != null">tcm_syndrome,</if>
+            <if test="tcmTreatment != null">tcm_treatment,</if>
+            <if test="prescription != null">prescription,</if>
+            <if test="herbComposition != null">herb_composition,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="medCaseId != null and medCaseId != ''">#{medCaseId},</if>
+            <if test="caseReport != null and caseReport != ''">#{caseReport},</if>
+            <if test="physician != null and physician != ''">#{physician},</if>
+            <if test="tcmDisease != null and tcmDisease != ''">#{tcmDisease},</if>
+            <if test="wmDisease != null and wmDisease != ''">#{wmDisease},</if>
+            <if test="tcmSymptoms != null and tcmSymptoms != ''">#{tcmSymptoms},</if>
+            <if test="wmSymptoms != null and wmSymptoms != ''">#{wmSymptoms},</if>
+            <if test="urinationDefecation != null and urinationDefecation != ''">#{urinationDefecation},</if>
+            <if test="pulseCondition != null and pulseCondition != ''">#{pulseCondition},</if>
+            <if test="tongueAppearance != null and tongueAppearance != ''">#{tongueAppearance},</if>
+            <if test="tcmSyndrome != null">#{tcmSyndrome},</if>
+            <if test="tcmTreatment != null">#{tcmTreatment},</if>
+            <if test="prescription != null">#{prescription},</if>
+            <if test="herbComposition != null">#{herbComposition},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateMedicalCases" parameterType="MedicalCases">
+        update medical_cases
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="medCaseId != null and medCaseId != ''">med_case_id = #{medCaseId},</if>
+            <if test="caseReport != null and caseReport != ''">case_report = #{caseReport},</if>
+            <if test="physician != null and physician != ''">physician = #{physician},</if>
+            <if test="tcmDisease != null and tcmDisease != ''">tcm_disease = #{tcmDisease},</if>
+            <if test="wmDisease != null and wmDisease != ''">wm_disease = #{wmDisease},</if>
+            <if test="tcmSymptoms != null and tcmSymptoms != ''">tcm_symptoms = #{tcmSymptoms},</if>
+            <if test="wmSymptoms != null and wmSymptoms != ''">wm_symptoms = #{wmSymptoms},</if>
+            <if test="urinationDefecation != null and urinationDefecation != ''">urination_defecation = #{urinationDefecation},</if>
+            <if test="pulseCondition != null and pulseCondition != ''">pulse_condition = #{pulseCondition},</if>
+            <if test="tongueAppearance != null and tongueAppearance != ''">tongue_appearance = #{tongueAppearance},</if>
+            <if test="tcmSyndrome != null">tcm_syndrome = #{tcmSyndrome},</if>
+            <if test="tcmTreatment != null">tcm_treatment = #{tcmTreatment},</if>
+            <if test="prescription != null">prescription = #{prescription},</if>
+            <if test="herbComposition != null">herb_composition = #{herbComposition},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteMedicalCasesById" parameterType="Long">
+        delete from medical_cases where id = #{id}
+    </delete>
+
+    <delete id="deleteMedicalCasesByIds" parameterType="String">
+        delete from medical_cases where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

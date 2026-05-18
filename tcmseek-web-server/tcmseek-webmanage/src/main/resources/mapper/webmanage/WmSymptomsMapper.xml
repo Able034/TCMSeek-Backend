@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.WmSymptomsMapper">
+    
+    <resultMap type="WmSymptoms" id="WmSymptomsResult">
+        <result property="id"    column="id"    />
+        <result property="wmSymptomId"    column="wm_symptom_id"    />
+        <result property="symptomName"    column="symptom_name"    />
+        <result property="umlsId"    column="umls_id"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectWmSymptomsVo">
+        select id, wm_symptom_id, symptom_name, umls_id, created_at, updated_at from wm_symptoms
+    </sql>
+
+    <select id="selectWmSymptomsList" parameterType="WmSymptoms" resultMap="WmSymptomsResult">
+        <include refid="selectWmSymptomsVo"/>
+        <where>  
+            <if test="wmSymptomId != null  and wmSymptomId != ''"> and wm_symptom_id = #{wmSymptomId}</if>
+            <if test="symptomName != null  and symptomName != ''"> and symptom_name like concat('%', #{symptomName}, '%')</if>
+            <if test="umlsId != null  and umlsId != ''"> and umls_id = #{umlsId}</if>
+        </where>
+    </select>
+    
+    <select id="selectWmSymptomsById" parameterType="Long" resultMap="WmSymptomsResult">
+        <include refid="selectWmSymptomsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertWmSymptoms" parameterType="WmSymptoms" useGeneratedKeys="true" keyProperty="id">
+        insert into wm_symptoms
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="wmSymptomId != null">wm_symptom_id,</if>
+            <if test="symptomName != null">symptom_name,</if>
+            <if test="umlsId != null">umls_id,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="wmSymptomId != null">#{wmSymptomId},</if>
+            <if test="symptomName != null">#{symptomName},</if>
+            <if test="umlsId != null">#{umlsId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateWmSymptoms" parameterType="WmSymptoms">
+        update wm_symptoms
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="wmSymptomId != null">wm_symptom_id = #{wmSymptomId},</if>
+            <if test="symptomName != null">symptom_name = #{symptomName},</if>
+            <if test="umlsId != null">umls_id = #{umlsId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteWmSymptomsById" parameterType="Long">
+        delete from wm_symptoms where id = #{id}
+    </delete>
+
+    <delete id="deleteWmSymptomsByIds" parameterType="String">
+        delete from wm_symptoms where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

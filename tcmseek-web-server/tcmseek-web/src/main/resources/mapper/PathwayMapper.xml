@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.dao.PathwayMapper">
+
+    <!-- 查询通路列表 -->
+    <select id="selectPathwayList" resultType="map">
+        SELECT 
+            pathway_id AS pathwayId,
+            name,
+            source,
+            (SELECT COUNT(*) FROM pathway_target_rel ptr WHERE ptr.pathway_id = p.pathway_id) AS targetCount
+        FROM pathways p
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    name LIKE CONCAT('%', #{keyword}, '%')
+                    OR pathway_id LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY pathway_id
+    </select>
+
+    <!-- 根据通路ID查询详情 -->
+    <select id="selectPathwayById" resultType="com.tcmseek.pojo.entity.Pathway">
+        SELECT 
+            id,
+            pathway_id AS pathwayId,
+            name,
+            source,
+            created_at AS createdAt,
+            updated_at AS updatedAt
+        FROM pathways
+        WHERE pathway_id = #{pathwayId}
+    </select>
+
+    <!-- 查询通路的关联靶标/基因 -->
+    <select id="selectTargetsByPathwayId" resultType="map">
+        SELECT 
+            t.tcm_tar_id AS tcmTarId,
+            t.gene_entrez_id AS geneEntrezId,
+            COALESCE(t.symbol, '') AS symbol,
+            COALESCE(NULLIF(TRIM(t.uniprot_id), '#N/A'), NULL) AS uniprotId,
+            COALESCE(t.ensembl_id, '') AS ensemblId,
+            COALESCE(t.description, '') AS description,
+            COALESCE(t.type_of_gene, '') AS typeOfGene
+        FROM pathway_target_rel ptr
+        INNER JOIN targets t ON ptr.tcm_tar_id = t.tcm_tar_id
+        WHERE ptr.pathway_id = #{pathwayId}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                t.symbol LIKE CONCAT('%', #{keyword}, '%')
+                OR t.description LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY t.symbol
+    </select>
+
+    <!-- 查询影响此通路的化合物 -->
+    <select id="selectCompoundsByPathwayId" resultType="map">
+        SELECT
+            c.inchikey,
+            c.molecular_formula AS molecularFormula,
+            c.molecular_weight AS molecularWeight,
+            c.pubchem_cid AS pubchemCid,
+            COUNT(DISTINCT ct.tcm_tar_id) AS targetCount
+        FROM pathway_target_rel ptr
+        INNER JOIN compound_target_rel ct ON ptr.tcm_tar_id = ct.tcm_tar_id
+        INNER JOIN tcm_compounds c ON ct.inchikey = c.inchikey
+        WHERE ptr.pathway_id = #{pathwayId}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                c.inchikey LIKE CONCAT(#{keyword}, '%')
+                OR c.molecular_formula LIKE CONCAT(#{keyword}, '%')
+            )
+        </if>
+        GROUP BY c.inchikey, c.molecular_formula, c.molecular_weight, c.pubchem_cid
+        ORDER BY targetCount DESC
+    </select>
+
+    <!-- 查询影响此通路的中药 -->
+    <select id="selectHerbsByPathwayId" resultType="map">
+        SELECT
+            h.tcm_herb_id AS tcmHerbId,
+            h.herb_name_zh AS herbNameZh,
+            h.pinyin_name AS pinyinName,
+            COUNT(DISTINCT ct.inchikey) AS compoundCount,
+            COUNT(DISTINCT ptr.tcm_tar_id) AS targetCount
+        FROM pathway_target_rel ptr
+        INNER JOIN compound_target_rel ct ON ptr.tcm_tar_id = ct.tcm_tar_id
+        INNER JOIN herb_compound_rel hcr ON ct.inchikey = hcr.inchikey
+        INNER JOIN core_tcm_herbs h ON hcr.tcm_herb_id = h.tcm_herb_id
+        WHERE ptr.pathway_id = #{pathwayId}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                h.herb_name_zh LIKE CONCAT(#{keyword}, '%')
+                OR h.pinyin_name LIKE CONCAT(#{keyword}, '%')
+            )
+        </if>
+        GROUP BY h.tcm_herb_id
+        ORDER BY targetCount DESC, compoundCount DESC
+    </select>
+
+    <!-- 获取通路的统计信息 -->
+    <select id="getStatistics" resultType="map">
+        SELECT 
+            (SELECT COUNT(DISTINCT tcm_tar_id) FROM pathway_target_rel WHERE pathway_id = #{pathwayId}) AS targetCount,
+            (SELECT COUNT(DISTINCT ct.inchikey) 
+             FROM pathway_target_rel ptr 
+             INNER JOIN compound_target_rel ct ON ptr.tcm_tar_id = ct.tcm_tar_id 
+             WHERE ptr.pathway_id = #{pathwayId}) AS compoundCount,
+            (SELECT COUNT(DISTINCT hcr.tcm_herb_id) 
+             FROM pathway_target_rel ptr 
+             INNER JOIN compound_target_rel ct ON ptr.tcm_tar_id = ct.tcm_tar_id
+             INNER JOIN herb_compound_rel hcr ON ct.inchikey = hcr.inchikey
+             WHERE ptr.pathway_id = #{pathwayId}) AS herbCount
+    </select>
+
+</mapper>
+

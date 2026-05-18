@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.mapper.PhenotypeMapper">
+
+    <!-- 表型列表查询（包含关联基因数量） -->
+    <select id="selectPhenotypeList" resultType="map">
+        SELECT 
+            p.phenotype_id AS phenotypeId,
+            p.phenotype_name AS phenotypeName,
+            p.source AS source,
+            COUNT(DISTINCT pt.tcm_tar_id) AS geneCount
+        FROM phenotypes p
+        LEFT JOIN phenotype_target_rel pt ON p.phenotype_id = pt.phenotype_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (p.phenotype_name LIKE CONCAT('%', #{keyword}, '%')
+                OR p.phenotype_id LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        GROUP BY p.phenotype_id, p.phenotype_name, p.source
+        ORDER BY p.phenotype_id
+    </select>
+
+    <!-- 根据表型ID查询表型详情 -->
+    <select id="selectPhenotypeById" resultType="com.tcmseek.pojo.entity.Phenotype">
+        SELECT 
+            id,
+            phenotype_id AS phenotypeId,
+            phenotype_name AS phenotypeName,
+            source
+        FROM phenotypes
+        WHERE phenotype_id = #{phenotypeId}
+    </select>
+
+    <!-- 查询表型关联的靶标/基因列表 -->
+    <select id="selectTargetsByPhenotypeId" resultType="map">
+        SELECT 
+            t.tcm_tar_id AS tcmTarId,
+            t.gene_entrez_id AS geneEntrezId,
+            COALESCE(t.symbol, '') AS symbol,
+            COALESCE(NULLIF(TRIM(t.uniprot_id), '#N/A'), NULL) AS uniprotId,
+            COALESCE(t.ensembl_id, '') AS ensemblId,
+            COALESCE(t.description, '') AS description,
+            COALESCE(t.type_of_gene, '') AS typeOfGene
+        FROM phenotype_target_rel pt
+        INNER JOIN targets t ON pt.tcm_tar_id = t.tcm_tar_id
+        WHERE pt.phenotype_id = #{phenotypeId}
+        <if test="keyword != null and keyword != ''">
+            AND (t.symbol LIKE CONCAT('%', #{keyword}, '%')
+            OR t.description LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY t.symbol
+    </select>
+
+    <!-- 统计表型关联的靶标数量 -->
+    <select id="countTargetsByPhenotypeId" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT tcm_tar_id)
+        FROM phenotype_target_rel
+        WHERE phenotype_id = #{phenotypeId}
+    </select>
+
+    <!-- 获取基因类型分布 -->
+    <select id="getGeneTypeDistribution" resultType="map">
+        SELECT 
+            COALESCE(t.type_of_gene, 'Unknown') AS geneType,
+            COUNT(*) AS count
+        FROM phenotype_target_rel pt
+        INNER JOIN targets t ON pt.tcm_tar_id = t.tcm_tar_id
+        WHERE pt.phenotype_id = #{phenotypeId}
+        GROUP BY t.type_of_gene
+        ORDER BY count DESC
+    </select>
+
+</mapper>
+
+
+

@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.CompoundAdmetMapper">
+    
+    <resultMap type="CompoundAdmet" id="CompoundAdmetResult">
+        <result property="id"    column="id"    />
+        <result property="inchikey"    column="inchikey"    />
+        <result property="ames"    column="ames"    />
+        <result property="bbbp"    column="bbbp"    />
+        <result property="bioavailability"    column="bioavailability"    />
+        <result property="caco2"    column="caco2"    />
+        <result property="carcinogens"    column="carcinogens"    />
+        <result property="clearanceMicrosome"    column="clearance_microsome"    />
+        <result property="clintox"    column="clintox"    />
+        <result property="cyp1a2Inhibition"    column="cyp1a2_inhibition"    />
+        <result property="cyp2c19Inhibition"    column="cyp2c19_inhibition"    />
+        <result property="cyp2c9Inhibition"    column="cyp2c9_inhibition"    />
+        <result property="cyp2c9Substrate"    column="cyp2c9_substrate"    />
+        <result property="cyp2d6Inhibition"    column="cyp2d6_inhibition"    />
+        <result property="cyp2d6Substrate"    column="cyp2d6_substrate"    />
+        <result property="cyp3a4Inhibition"    column="cyp3a4_inhibition"    />
+        <result property="cyp3a4Substrate"    column="cyp3a4_substrate"    />
+        <result property="dili"    column="dili"    />
+        <result property="freesolv"    column="freesolv"    />
+        <result property="hergBlockers"    column="herg_blockers"    />
+        <result property="hergKarim"    column="herg_karim"    />
+        <result property="hia"    column="hia"    />
+        <result property="ld50"    column="ld50"    />
+        <result property="lipophilicity"    column="lipophilicity"    />
+        <result property="pampa"    column="pampa"    />
+        <result property="pgp"    column="pgp"    />
+        <result property="ppbr"    column="ppbr"    />
+        <result property="skin"    column="skin"    />
+        <result property="solubility"    column="solubility"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectCompoundAdmetVo">
+        select id, inchikey, ames, bbbp, bioavailability, caco2, carcinogens, clearance_microsome, clintox, cyp1a2_inhibition, cyp2c19_inhibition, cyp2c9_inhibition, cyp2c9_substrate, cyp2d6_inhibition, cyp2d6_substrate, cyp3a4_inhibition, cyp3a4_substrate, dili, freesolv, herg_blockers, herg_karim, hia, ld50, lipophilicity, pampa, pgp, ppbr, skin, solubility, created_at, updated_at from compound_admet
+    </sql>
+
+    <select id="selectCompoundAdmetList" parameterType="CompoundAdmet" resultMap="CompoundAdmetResult">
+        <include refid="selectCompoundAdmetVo"/>
+        <where>  
+            <if test="inchikey != null  and inchikey != ''"> and inchikey = #{inchikey}</if>
+        </where>
+    </select>
+    
+    <select id="selectCompoundAdmetById" parameterType="Long" resultMap="CompoundAdmetResult">
+        <include refid="selectCompoundAdmetVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCompoundAdmet" parameterType="CompoundAdmet" useGeneratedKeys="true" keyProperty="id">
+        insert into compound_admet
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey,</if>
+            <if test="ames != null">ames,</if>
+            <if test="bbbp != null">bbbp,</if>
+            <if test="bioavailability != null">bioavailability,</if>
+            <if test="caco2 != null">caco2,</if>
+            <if test="carcinogens != null">carcinogens,</if>
+            <if test="clearanceMicrosome != null">clearance_microsome,</if>
+            <if test="clintox != null">clintox,</if>
+            <if test="cyp1a2Inhibition != null">cyp1a2_inhibition,</if>
+            <if test="cyp2c19Inhibition != null">cyp2c19_inhibition,</if>
+            <if test="cyp2c9Inhibition != null">cyp2c9_inhibition,</if>
+            <if test="cyp2c9Substrate != null">cyp2c9_substrate,</if>
+            <if test="cyp2d6Inhibition != null">cyp2d6_inhibition,</if>
+            <if test="cyp2d6Substrate != null">cyp2d6_substrate,</if>
+            <if test="cyp3a4Inhibition != null">cyp3a4_inhibition,</if>
+            <if test="cyp3a4Substrate != null">cyp3a4_substrate,</if>
+            <if test="dili != null">dili,</if>
+            <if test="freesolv != null">freesolv,</if>
+            <if test="hergBlockers != null">herg_blockers,</if>
+            <if test="hergKarim != null">herg_karim,</if>
+            <if test="hia != null">hia,</if>
+            <if test="ld50 != null">ld50,</if>
+            <if test="lipophilicity != null">lipophilicity,</if>
+            <if test="pampa != null">pampa,</if>
+            <if test="pgp != null">pgp,</if>
+            <if test="ppbr != null">ppbr,</if>
+            <if test="skin != null">skin,</if>
+            <if test="solubility != null">solubility,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">#{inchikey},</if>
+            <if test="ames != null">#{ames},</if>
+            <if test="bbbp != null">#{bbbp},</if>
+            <if test="bioavailability != null">#{bioavailability},</if>
+            <if test="caco2 != null">#{caco2},</if>
+            <if test="carcinogens != null">#{carcinogens},</if>
+            <if test="clearanceMicrosome != null">#{clearanceMicrosome},</if>
+            <if test="clintox != null">#{clintox},</if>
+            <if test="cyp1a2Inhibition != null">#{cyp1a2Inhibition},</if>
+            <if test="cyp2c19Inhibition != null">#{cyp2c19Inhibition},</if>
+            <if test="cyp2c9Inhibition != null">#{cyp2c9Inhibition},</if>
+            <if test="cyp2c9Substrate != null">#{cyp2c9Substrate},</if>
+            <if test="cyp2d6Inhibition != null">#{cyp2d6Inhibition},</if>
+            <if test="cyp2d6Substrate != null">#{cyp2d6Substrate},</if>
+            <if test="cyp3a4Inhibition != null">#{cyp3a4Inhibition},</if>
+            <if test="cyp3a4Substrate != null">#{cyp3a4Substrate},</if>
+            <if test="dili != null">#{dili},</if>
+            <if test="freesolv != null">#{freesolv},</if>
+            <if test="hergBlockers != null">#{hergBlockers},</if>
+            <if test="hergKarim != null">#{hergKarim},</if>
+            <if test="hia != null">#{hia},</if>
+            <if test="ld50 != null">#{ld50},</if>
+            <if test="lipophilicity != null">#{lipophilicity},</if>
+            <if test="pampa != null">#{pampa},</if>
+            <if test="pgp != null">#{pgp},</if>
+            <if test="ppbr != null">#{ppbr},</if>
+            <if test="skin != null">#{skin},</if>
+            <if test="solubility != null">#{solubility},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCompoundAdmet" parameterType="CompoundAdmet">
+        update compound_admet
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="inchikey != null and inchikey != ''">inchikey = #{inchikey},</if>
+            <if test="ames != null">ames = #{ames},</if>
+            <if test="bbbp != null">bbbp = #{bbbp},</if>
+            <if test="bioavailability != null">bioavailability = #{bioavailability},</if>
+            <if test="caco2 != null">caco2 = #{caco2},</if>
+            <if test="carcinogens != null">carcinogens = #{carcinogens},</if>
+            <if test="clearanceMicrosome != null">clearance_microsome = #{clearanceMicrosome},</if>
+            <if test="clintox != null">clintox = #{clintox},</if>
+            <if test="cyp1a2Inhibition != null">cyp1a2_inhibition = #{cyp1a2Inhibition},</if>
+            <if test="cyp2c19Inhibition != null">cyp2c19_inhibition = #{cyp2c19Inhibition},</if>
+            <if test="cyp2c9Inhibition != null">cyp2c9_inhibition = #{cyp2c9Inhibition},</if>
+            <if test="cyp2c9Substrate != null">cyp2c9_substrate = #{cyp2c9Substrate},</if>
+            <if test="cyp2d6Inhibition != null">cyp2d6_inhibition = #{cyp2d6Inhibition},</if>
+            <if test="cyp2d6Substrate != null">cyp2d6_substrate = #{cyp2d6Substrate},</if>
+            <if test="cyp3a4Inhibition != null">cyp3a4_inhibition = #{cyp3a4Inhibition},</if>
+            <if test="cyp3a4Substrate != null">cyp3a4_substrate = #{cyp3a4Substrate},</if>
+            <if test="dili != null">dili = #{dili},</if>
+            <if test="freesolv != null">freesolv = #{freesolv},</if>
+            <if test="hergBlockers != null">herg_blockers = #{hergBlockers},</if>
+            <if test="hergKarim != null">herg_karim = #{hergKarim},</if>
+            <if test="hia != null">hia = #{hia},</if>
+            <if test="ld50 != null">ld50 = #{ld50},</if>
+            <if test="lipophilicity != null">lipophilicity = #{lipophilicity},</if>
+            <if test="pampa != null">pampa = #{pampa},</if>
+            <if test="pgp != null">pgp = #{pgp},</if>
+            <if test="ppbr != null">ppbr = #{ppbr},</if>
+            <if test="skin != null">skin = #{skin},</if>
+            <if test="solubility != null">solubility = #{solubility},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCompoundAdmetById" parameterType="Long">
+        delete from compound_admet where id = #{id}
+    </delete>
+
+    <delete id="deleteCompoundAdmetByIds" parameterType="String">
+        delete from compound_admet where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectByInchikeys" parameterType="java.util.List" resultMap="CompoundAdmetResult">
+        <include refid="selectCompoundAdmetVo"/>
+        where inchikey in
+        <foreach collection="inchikeys" item="inchikey" open="(" separator="," close=")">
+            #{inchikey}
+        </foreach>
+    </select>
+
+    <insert id="batchInsertCompoundAdmet" parameterType="java.util.List">
+        insert into compound_admet
+        (inchikey, ames, bbbp, bioavailability, caco2, carcinogens, clearance_microsome, clintox,
+         cyp1a2_inhibition, cyp2c19_inhibition, cyp2c9_inhibition, cyp2c9_substrate, cyp2d6_inhibition,
+         cyp2d6_substrate, cyp3a4_inhibition, cyp3a4_substrate, dili, freesolv, herg_blockers, herg_karim,
+         hia, ld50, lipophilicity, pampa, pgp, ppbr, skin, solubility, created_at, updated_at)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.inchikey}, #{item.ames}, #{item.bbbp}, #{item.bioavailability}, #{item.caco2},
+             #{item.carcinogens}, #{item.clearanceMicrosome}, #{item.clintox}, #{item.cyp1a2Inhibition},
+             #{item.cyp2c19Inhibition}, #{item.cyp2c9Inhibition}, #{item.cyp2c9Substrate},
+             #{item.cyp2d6Inhibition}, #{item.cyp2d6Substrate}, #{item.cyp3a4Inhibition},
+             #{item.cyp3a4Substrate}, #{item.dili}, #{item.freesolv}, #{item.hergBlockers},
+             #{item.hergKarim}, #{item.hia}, #{item.ld50}, #{item.lipophilicity}, #{item.pampa},
+             #{item.pgp}, #{item.ppbr}, #{item.skin}, #{item.solubility}, #{item.createdAt},
+             #{item.updatedAt})
+        </foreach>
+    </insert>
+</mapper>

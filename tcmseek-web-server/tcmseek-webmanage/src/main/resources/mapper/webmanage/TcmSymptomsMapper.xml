@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tcmseek.webmanage.mapper.TcmSymptomsMapper">
+    
+    <resultMap type="TcmSymptoms" id="TcmSymptomsResult">
+        <result property="id"    column="id"    />
+        <result property="tcmSymptomId"    column="tcm_symptom_id"    />
+        <result property="symptomNameZh"    column="symptom_name_zh"    />
+        <result property="symptomPinyin"    column="symptom_pinyin"    />
+        <result property="symptomDefinition"    column="symptom_definition"    />
+        <result property="symptomLocus"    column="symptom_locus"    />
+        <result property="symptomProperty"    column="symptom_property"    />
+        <result property="type"    column="type"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectTcmSymptomsVo">
+        select id, tcm_symptom_id, symptom_name_zh, symptom_pinyin, symptom_definition, symptom_locus, symptom_property, type, created_at, updated_at from tcm_symptoms
+    </sql>
+
+    <select id="selectTcmSymptomsList" parameterType="TcmSymptoms" resultMap="TcmSymptomsResult">
+        <include refid="selectTcmSymptomsVo"/>
+        <where>  
+            <if test="tcmSymptomId != null  and tcmSymptomId != ''"> and tcm_symptom_id = #{tcmSymptomId}</if>
+            <if test="symptomNameZh != null  and symptomNameZh != ''"> and symptom_name_zh = #{symptomNameZh}</if>
+            <if test="symptomPinyin != null  and symptomPinyin != ''"> and symptom_pinyin = #{symptomPinyin}</if>
+            <if test="symptomDefinition != null  and symptomDefinition != ''"> and symptom_definition = #{symptomDefinition}</if>
+            <if test="symptomLocus != null  and symptomLocus != ''"> and symptom_locus = #{symptomLocus}</if>
+            <if test="symptomProperty != null  and symptomProperty != ''"> and symptom_property = #{symptomProperty}</if>
+            <if test="type != null  and type != ''"> and type = #{type}</if>
+        </where>
+    </select>
+    
+    <select id="selectTcmSymptomsById" parameterType="Long" resultMap="TcmSymptomsResult">
+        <include refid="selectTcmSymptomsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTcmSymptoms" parameterType="TcmSymptoms" useGeneratedKeys="true" keyProperty="id">
+        insert into tcm_symptoms
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tcmSymptomId != null and tcmSymptomId != ''">tcm_symptom_id,</if>
+            <if test="symptomNameZh != null and symptomNameZh != ''">symptom_name_zh,</if>
+            <if test="symptomPinyin != null">symptom_pinyin,</if>
+            <if test="symptomDefinition != null">symptom_definition,</if>
+            <if test="symptomLocus != null">symptom_locus,</if>
+            <if test="symptomProperty != null">symptom_property,</if>
+            <if test="type != null">type,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tcmSymptomId != null and tcmSymptomId != ''">#{tcmSymptomId},</if>
+            <if test="symptomNameZh != null and symptomNameZh != ''">#{symptomNameZh},</if>
+            <if test="symptomPinyin != null">#{symptomPinyin},</if>
+            <if test="symptomDefinition != null">#{symptomDefinition},</if>
+            <if test="symptomLocus != null">#{symptomLocus},</if>
+            <if test="symptomProperty != null">#{symptomProperty},</if>
+            <if test="type != null">#{type},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTcmSymptoms" parameterType="TcmSymptoms">
+        update tcm_symptoms
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tcmSymptomId != null and tcmSymptomId != ''">tcm_symptom_id = #{tcmSymptomId},</if>
+            <if test="symptomNameZh != null and symptomNameZh != ''">symptom_name_zh = #{symptomNameZh},</if>
+            <if test="symptomPinyin != null">symptom_pinyin = #{symptomPinyin},</if>
+            <if test="symptomDefinition != null">symptom_definition = #{symptomDefinition},</if>
+            <if test="symptomLocus != null">symptom_locus = #{symptomLocus},</if>
+            <if test="symptomProperty != null">symptom_property = #{symptomProperty},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTcmSymptomsById" parameterType="Long">
+        delete from tcm_symptoms where id = #{id}
+    </delete>
+
+    <delete id="deleteTcmSymptomsByIds" parameterType="String">
+        delete from tcm_symptoms where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
