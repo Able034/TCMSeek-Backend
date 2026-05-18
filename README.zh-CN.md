@@ -66,7 +66,7 @@ flowchart LR
 ## 项目结构
 
 ```text
-TCMSeek-Backend-main/
+TCMSeek-Backend/
 |-- tcmseek-web-server/    基于 RuoYi 的业务后端服务工程
 |-- tcmseek-ai-service/    AI 问答微服务
 |-- tcmseek-gateway/       统一网关服务
@@ -158,10 +158,10 @@ tcmseek-web-server/tcmseek-admin -> tcmseek-ai-service -> tcmseek-gateway
 ### 1. 启动业务后端
 
 ```powershell
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-web-server
+cd tcmseek-web-server
 mvn clean install -DskipTests
 
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-web-server\tcmseek-admin
+cd tcmseek-admin
 mvn spring-boot:run
 ```
 
@@ -174,7 +174,7 @@ http://localhost:8080
 ### 2. 启动 AI 微服务
 
 ```powershell
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-ai-service
+cd tcmseek-ai-service
 mvn spring-boot:run
 ```
 
@@ -187,7 +187,7 @@ http://localhost:8088
 ### 3. 启动 Gateway
 
 ```powershell
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-gateway
+cd tcmseek-gateway
 mvn spring-boot:run
 ```
 
@@ -265,15 +265,15 @@ Authorization: <token>
 
 ```powershell
 # 业务后端
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-web-server
+cd tcmseek-web-server
 mvn clean package -DskipTests
 
 # AI 微服务
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-ai-service
+cd ../tcmseek-ai-service
 mvn clean package -DskipTests
 
 # Gateway
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-gateway
+cd ../tcmseek-gateway
 mvn clean package -DskipTests
 ```
 

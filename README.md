@@ -66,7 +66,7 @@ flowchart LR
 ## Repository Layout
 
 ```text
-TCMSeek-Backend-main/
+TCMSeek-Backend/
 |-- tcmseek-web-server/    RuoYi-based business backend
 |-- tcmseek-ai-service/    AI Q&A microservice
 |-- tcmseek-gateway/       Unified gateway service
@@ -158,10 +158,10 @@ tcmseek-web-server/tcmseek-admin -> tcmseek-ai-service -> tcmseek-gateway
 ### 1. Start Business Backend
 
 ```powershell
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-web-server
+cd tcmseek-web-server
 mvn clean install -DskipTests
 
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-web-server\tcmseek-admin
+cd tcmseek-admin
 mvn spring-boot:run
 ```
 
@@ -174,7 +174,7 @@ http://localhost:8080
 ### 2. Start AI Microservice
 
 ```powershell
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-ai-service
+cd tcmseek-ai-service
 mvn spring-boot:run
 ```
 
@@ -187,7 +187,7 @@ http://localhost:8088
 ### 3. Start Gateway
 
 ```powershell
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-gateway
+cd tcmseek-gateway
 mvn spring-boot:run
 ```
 
@@ -265,15 +265,15 @@ Authorization: <token>
 
 ```powershell
 # Business backend
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-web-server
+cd tcmseek-web-server
 mvn clean package -DskipTests
 
 # AI microservice
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-ai-service
+cd ../tcmseek-ai-service
 mvn clean package -DskipTests
 
 # Gateway
-cd D:\TCMseek\Backend\TCMSeek-Backend-main\tcmseek-gateway
+cd ../tcmseek-gateway
 mvn clean package -DskipTests
 ```
 
