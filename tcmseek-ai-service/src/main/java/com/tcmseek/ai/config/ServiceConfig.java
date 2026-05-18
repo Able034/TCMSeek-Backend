@@ -6,6 +6,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 @Configuration
 @EnableConfigurationProperties({
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
         AiRuntimeProperties.class,
         AiToolProperties.class,
         AiConversationStorageProperties.class,
+        TcmReasonProperties.class,
         Neo4jProperties.class
 })
 public class ServiceConfig {
@@ -26,8 +28,14 @@ public class ServiceConfig {
     }
 
     @Bean(destroyMethod = "shutdown")
+    @Primary
     public java.util.concurrent.ExecutorService aiModelExecutor(AiRuntimeProperties properties) {
         int poolSize = Math.max(1, properties.getModelExecutorPoolSize());
         return java.util.concurrent.Executors.newFixedThreadPool(poolSize);
+    }
+
+    @Bean(destroyMethod = "shutdown")
+    public java.util.concurrent.ScheduledExecutorService aiStreamHeartbeatExecutor() {
+        return java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
     }
 }

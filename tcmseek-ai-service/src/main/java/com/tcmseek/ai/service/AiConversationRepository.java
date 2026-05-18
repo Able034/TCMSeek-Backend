@@ -213,9 +213,14 @@ public class AiConversationRepository {
 
     public ConversationSummaryDto createConversation(String userId, String mode, String title) {
         String normalizedMode = normalizeMode(mode);
-        String conversationId = normalizedMode + "-" + compactUuid();
         String owner = normalizeUserId(userId);
         String safeTitle = StringUtils.hasText(title) ? title.trim() : "新对话";
+        ConversationSummaryDto reusable = findReusableEmptyConversation(owner, normalizedMode, safeTitle);
+        if (reusable != null) {
+            return reusable;
+        }
+
+        String conversationId = normalizedMode + "-" + compactUuid();
         jdbcTemplate.update("""
                         insert into ai_conversation (id, user_id, title, mode, status, message_count, last_message_at)
                         values (?, ?, ?, ?, 'active', 0, null)
@@ -225,6 +230,30 @@ public class AiConversationRepository {
                 safeTitle.length() <= 200 ? safeTitle : safeTitle.substring(0, 200),
                 normalizedMode);
         return findConversation(owner, conversationId);
+    }
+
+    public ConversationSummaryDto findReusableEmptyConversation(String userId, String mode, String title) {
+        if (!isDefaultConversationTitle(title)) {
+            return null;
+        }
+        List<ConversationSummaryDto> items = jdbcTemplate.query("""
+                        select id, title, mode, status, message_count,
+                               last_message_at::text as last_message_at,
+                               updated_at::text as updated_at
+                        from ai_conversation
+                        where user_id = ?
+                          and mode = ?
+                          and status = 'active'
+                          and message_count = 0
+                          and last_message_at is null
+                          and (title is null or title = '' or title in ('新对话', '新会话'))
+                        order by updated_at desc, id desc
+                        limit 1
+                        """,
+                (rs, rowNum) -> mapConversation(rs),
+                normalizeUserId(userId),
+                normalizeMode(mode));
+        return items.isEmpty() ? null : items.get(0);
     }
 
     public ConversationSummaryDto findConversation(String userId, String conversationId) {
@@ -539,6 +568,14 @@ public class AiConversationRepository {
 
     private String normalizeUserId(String userId) {
         return StringUtils.hasText(userId) ? userId : "anonymous";
+    }
+
+    private boolean isDefaultConversationTitle(String title) {
+        if (!StringUtils.hasText(title)) {
+            return true;
+        }
+        String normalized = title.trim();
+        return "新对话".equals(normalized) || "新会话".equals(normalized);
     }
 
     private String titleFrom(String content) {

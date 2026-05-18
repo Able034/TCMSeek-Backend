@@ -29,8 +29,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import reactor.core.publisher.Flux;
 
 @Service
 public class AiChatService {
@@ -57,6 +60,11 @@ public class AiChatService {
 
     @Value("${spring.ai.openai.chat.options.model:deepseek-chat}")
     private String model;
+
+    @FunctionalInterface
+    public interface StreamEventSink {
+        void send(String event, Object data);
+    }
 
     public AiChatService(ChatClient.Builder chatClientBuilder,
                          AiPromptProperties promptProperties,
@@ -159,6 +167,89 @@ public class AiChatService {
         return response;
     }
 
+    public void stream(AiChatRequest request, AiRequestContext context, StreamEventSink sink) {
+        AiRequestContext requestContext = context == null ? AiRequestContext.empty() : context;
+        long startedAt = System.currentTimeMillis();
+        List<AiMessage> messageContext = sessionManager.buildContext(
+                request != null ? request.getSessionId() : null,
+                request != null ? request.getMessages() : null,
+                requestContext);
+        String userPrompt = buildUserPrompt(messageContext);
+        String latestQuestion = latestUserQuestion(request);
+        String sessionId = request == null ? null : request.getSessionId();
+        log.info("ai chat stream started requestId={} userId={} username={} account={} sessionId={} question={}",
+                requestContext.getRequestId(), requestContext.getUserId(), requestContext.getUsername(),
+                requestContext.getAccount(), sessionId, abbreviate(latestQuestion));
+
+        List<ToolCallResult> toolResults = executeFallback(latestQuestion);
+        String reply = null;
+        String finishReason = "model_answer";
+        boolean streamedReply = false;
+        if (toolResults.isEmpty()) {
+            toolExecutionRecorder.start();
+            try {
+                reply = callModelStream(userPrompt, delta -> sendDelta(sink, delta));
+                streamedReply = true;
+            } catch (RuntimeException ex) {
+                throw downstreamException(ex);
+            } finally {
+                toolResults = toolExecutionRecorder.finish();
+            }
+        }
+
+        String exportUrl = buildCsvDownloadUrl(toolResults, requestContext);
+        List<ToolCallResult> responseToolResults = toolResultCompressor.forAnswer(toolResults);
+        if (!responseToolResults.isEmpty()) {
+            if (!hasAnyToolData(responseToolResults)) {
+                finishReason = "tool_no_result";
+                reply = noToolResultReply(responseToolResults);
+                streamedReply = false;
+            } else {
+                try {
+                    reply = summarizeToolResultsStream(
+                            latestQuestion,
+                            responseToolResults,
+                            exportUrl,
+                            delta -> sendDelta(sink, delta));
+                    finishReason = "tool_summarized";
+                    streamedReply = true;
+                } catch (RuntimeException ex) {
+                    log.warn("ai summarize stream failed, fallback to deterministic tool summary requestId={} userId={} sessionId={} message={}",
+                            requestContext.getRequestId(), requestContext.getUserId(), sessionId, ex.getMessage(), ex);
+                    reply = fallbackToolReply(responseToolResults, exportUrl);
+                    finishReason = "tool_summary_fallback";
+                    streamedReply = false;
+                }
+            }
+        }
+        reply = limitReplyLength(reply, exportUrl);
+        reply = sanitizeUserFacingReply(reply);
+        if (!streamedReply) {
+            sendDelta(sink, reply);
+        }
+
+        AiChatResponse response = new AiChatResponse(reply, "deepseek", model);
+        response.setId(UUID.randomUUID().toString());
+        response.setFinishReason(finishReason);
+        response.setToolResults(responseToolResults);
+        enrichToolPayload(response, toolResults, exportUrl);
+
+        if (request != null) {
+            sessionManager.appendExchange(
+                    request.getSessionId(),
+                    request.getMessages(),
+                    reply,
+                    requestContext,
+                    response,
+                    responseToolResults,
+                    System.currentTimeMillis() - startedAt);
+        }
+        sink.send("metadata", response);
+        log.info("ai chat stream completed requestId={} userId={} sessionId={} finishReason={} toolCalls={} tools={} exportUrl={} costMs={}",
+                requestContext.getRequestId(), requestContext.getUserId(), sessionId, finishReason,
+                toolResults.size(), toolNames(toolResults), exportUrl, System.currentTimeMillis() - startedAt);
+    }
+
     private String sanitizeUserFacingReply(String reply) {
         if (!StringUtils.hasText(reply)) {
             return reply;
@@ -193,6 +284,16 @@ public class AiChatService {
                 .content());
     }
 
+    private String callModelStream(String userPrompt, Consumer<String> onDelta) {
+        return executeModelStream("chat-stream", () -> chatClientBuilder.build()
+                .prompt()
+                .system(promptProperties.getSystemPrompt())
+                .user(userPrompt)
+                .tools(tcmGraphTools)
+                .stream()
+                .content(), onDelta);
+    }
+
     private String summarizeToolResults(String question, List<ToolCallResult> toolResults, String csvDownloadUrl) {
         String json;
         try {
@@ -207,6 +308,25 @@ public class AiChatService {
                 .user(prompt)
                 .call()
                 .content());
+    }
+
+    private String summarizeToolResultsStream(String question,
+                                              List<ToolCallResult> toolResults,
+                                              String csvDownloadUrl,
+                                              Consumer<String> onDelta) {
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(toolResults);
+        } catch (JsonProcessingException e) {
+            json = String.valueOf(toolResults);
+        }
+        String prompt = summaryPrompt(question, json, csvDownloadUrl);
+        return executeModelStream("summarize-tools-stream", () -> chatClientBuilder.build()
+                .prompt()
+                .system(promptProperties.getSystemPrompt())
+                .user(prompt)
+                .stream()
+                .content(), onDelta);
     }
 
     private String fallbackToolReply(List<ToolCallResult> toolResults, String csvDownloadUrl) {
@@ -405,6 +525,61 @@ public class AiChatService {
         }
         int maxLength = Math.max(20, runtimeProperties.getQuestionLogMaxLength());
         return text.length() <= maxLength ? text : text.substring(0, maxLength) + "...";
+    }
+
+    private void sendDelta(StreamEventSink sink, String delta) {
+        if (sink != null && StringUtils.hasLength(delta)) {
+            sink.send("delta", Map.of("text", delta));
+        }
+    }
+
+    private String executeModelStream(String operation, Supplier<Flux<String>> supplier, Consumer<String> onDelta) {
+        int attempts = Math.max(1, runtimeProperties.getMaxRetries() + 1);
+        RuntimeException lastError = null;
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            long startedAt = System.currentTimeMillis();
+            boolean[] emitted = {false};
+            try {
+                String content = collectStreamContent(supplier.get(), delta -> {
+                    emitted[0] = true;
+                    onDelta.accept(delta);
+                });
+                log.info("ai model stream succeeded operation={} attempt={} costMs={}",
+                        operation, attempt, System.currentTimeMillis() - startedAt);
+                return content;
+            } catch (RuntimeException ex) {
+                lastError = ex;
+                boolean retry = attempt < attempts && !emitted[0];
+                log.warn("ai model stream failed operation={} attempt={}/{} retry={} emitted={} costMs={} message={}",
+                        operation, attempt, attempts, retry, emitted[0],
+                        System.currentTimeMillis() - startedAt, ex.getMessage());
+                if (retry) {
+                    sleepBeforeRetry();
+                } else {
+                    break;
+                }
+            }
+        }
+        throw lastError == null
+                ? new AiServiceException(HttpStatus.BAD_GATEWAY, "AI_PROVIDER_UNAVAILABLE",
+                "AI 模型服务暂时不可用。", null)
+                : lastError;
+    }
+
+    private String collectStreamContent(Flux<String> contentFlux, Consumer<String> onDelta) {
+        StringBuilder content = new StringBuilder();
+        Flux<String> flux = contentFlux == null ? Flux.empty() : contentFlux;
+        Duration timeout = runtimeProperties.getRequestTimeout();
+        if (timeout != null && !timeout.isZero() && !timeout.isNegative()) {
+            flux = flux.timeout(timeout);
+        }
+        flux.doOnNext(delta -> {
+            if (StringUtils.hasLength(delta)) {
+                content.append(delta);
+                onDelta.accept(delta);
+            }
+        }).blockLast();
+        return content.toString();
     }
 
     private String executeModelCall(String operation, Supplier<String> supplier) {

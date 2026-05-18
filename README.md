@@ -11,6 +11,7 @@ Backend services for Traditional Chinese Medicine data retrieval, knowledge grap
 ![Spring Cloud Gateway](https://img.shields.io/badge/Spring%20Cloud-Gateway-6DB33F?style=flat-square)
 ![RuoYi](https://img.shields.io/badge/Base-RuoYi-blue?style=flat-square)
 ![DeepSeek](https://img.shields.io/badge/LLM-DeepSeek-4B6BFB?style=flat-square)
+![TCMReason](https://img.shields.io/badge/LLM-TCMReason-8A2BE2?style=flat-square)
 ![Neo4j](https://img.shields.io/badge/Graph-Neo4j-4581C3?style=flat-square)
 ![PostgreSQL](https://img.shields.io/badge/Storage-PostgreSQL-4169E1?style=flat-square)
 ![Redis](https://img.shields.io/badge/Cache-Redis-DC382D?style=flat-square)
@@ -26,7 +27,7 @@ The project is designed around three peer services:
 | Service | Role | Default Port |
 | --- | --- | --- |
 | `tcmseek-web-server` | Business backend based on the RuoYi open-source framework | `8080` |
-| `tcmseek-ai-service` | AI Q&A service with DeepSeek, Neo4j tools, PostgreSQL storage, and Redis cache | `8088` |
+| `tcmseek-ai-service` | AI Q&A service with TCMReason, DeepSeek, Neo4j tools, PostgreSQL storage, and Redis cache | `8088` |
 | `tcmseek-gateway` | Unified frontend gateway for routing, token validation, and user context forwarding | `8090` |
 
 ## Architecture
@@ -42,6 +43,7 @@ flowchart LR
   Web --> Redis[("Redis<br/>login and business cache")]
   Web --> Neo4j[("Neo4j<br/>knowledge graph")]
 
+  AI --> TCMReason["TCMReason API"]
   AI --> DeepSeek["DeepSeek API"]
   AI --> Neo4j
   AI --> PG[("PostgreSQL<br/>AI conversations")]
@@ -58,7 +60,7 @@ flowchart LR
 | --- | --- |
 | TCM data service | Herbs, compounds, diseases, symptoms, syndromes, prescriptions, and related entities |
 | Knowledge graph | Neo4j-based relationship queries across herbs, compounds, targets, diseases, and prescriptions |
-| AI Q&A | DeepSeek conversation, graph tool calling, result summarization, long-result compression |
+| AI Q&A | TCMReason general TCM Q&A, DeepSeek graph tool calling, result summarization, long-result compression |
 | Conversation history | User-isolated conversations, messages, tool call records, summaries, and memories |
 | CSV export | Large graph query results are summarized in chat and exported through Gateway |
 | Gateway access | Frontend APIs are unified under `/api/web/**` and `/api/ai/**` |
@@ -100,7 +102,8 @@ TCMSeek-Backend/
 | Redis | 5.x+ | Cache, active AI context, temporary CSV results |
 | Neo4j | 4.x / 5.x | TCM knowledge graph |
 | PostgreSQL | 13+ | AI conversations, messages, summaries, and memories |
-| DeepSeek API Key | Apply separately | AI Q&A provider |
+| DeepSeek API Key | Apply separately | Graph-assisted Q&A and summarization provider |
+| TCMReason API URL | Provided by the lab | General TCM Q&A provider |
 
 ## Database Resources
 
@@ -138,7 +141,7 @@ tcmseek-gateway/src/main/resources/application-example.yml
 | Service | Key Configuration |
 | --- | --- |
 | `tcmseek-web-server/tcmseek-admin` | MySQL, Redis, Neo4j, Nacos, token secret |
-| `tcmseek-ai-service` | DeepSeek API key, Neo4j, PostgreSQL, Redis, Nacos |
+| `tcmseek-ai-service` | TCMReason API URL, DeepSeek API key, Neo4j, PostgreSQL, Redis, Nacos |
 | `tcmseek-gateway` | Nacos, route rules, authentication allowlist, token validation target |
 
 ## Quick Start
@@ -206,8 +209,8 @@ Frontend applications should access backend services through the gateway.
 | `POST /api/web/tcmseek/login` | `tcmseek-admin /tcmseek/login` | No gateway token required |
 | `ANY /api/web/tcmseek/**` | `tcmseek-admin /tcmseek/**` | Public data queries do not require gateway token by default |
 | `ANY /api/web/tcmseek/tools/target-prediction/**` | `tcmseek-admin /tcmseek/tools/target-prediction/**` | User token required |
-| `POST /api/ai/chat` | `tcmseek-ai-service /ai/chat` | User token required |
-| `POST /api/ai/aichat` | `tcmseek-ai-service /ai/aichat` | User token required |
+| `POST /api/ai/chat` | `tcmseek-ai-service /ai/chat`, TCMReason general chat | User token required |
+| `POST /api/ai/aichat` | `tcmseek-ai-service /ai/aichat`, DeepSeek graph-assisted academic chat | User token required |
 | `GET /api/ai/conversations` | `tcmseek-ai-service /ai/conversations` | User token required |
 | `GET /api/ai/conversations/{id}/messages` | `tcmseek-ai-service /ai/conversations/{id}/messages` | User token required |
 | `PATCH /api/ai/conversations/{id}` | `tcmseek-ai-service /ai/conversations/{id}` | User token required |

@@ -9,6 +9,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +26,8 @@ import javax.validation.Valid;
 @RequiredArgsConstructor
 @RequestMapping("/tcmseek/llm")
 @Api(tags = "大模型")
+@Deprecated
+@ConditionalOnProperty(prefix = "tcmseek.legacy-llm", name = "enabled", havingValue = "true")
 public class LlmController {
 
     private final LlmService llmService;

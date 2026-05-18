@@ -7,6 +7,7 @@ import com.tcmseek.ai.service.AiRequestContext;
 import com.tcmseek.ai.service.AiChatService;
 import com.tcmseek.ai.service.CsvExportStore;
 import com.tcmseek.ai.service.CsvRenderer;
+import com.tcmseek.ai.service.TcmReasonChatService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,14 +37,18 @@ public class TcmseekLlmCompatibleController {
 
     private final AiChatService aiChatService;
 
+    private final TcmReasonChatService tcmReasonChatService;
+
     private final CsvExportStore csvExportStore;
 
     private final CsvRenderer csvRenderer;
 
     public TcmseekLlmCompatibleController(AiChatService aiChatService,
+                                          TcmReasonChatService tcmReasonChatService,
                                           CsvExportStore csvExportStore,
                                           CsvRenderer csvRenderer) {
         this.aiChatService = aiChatService;
+        this.tcmReasonChatService = tcmReasonChatService;
         this.csvExportStore = csvExportStore;
         this.csvRenderer = csvRenderer;
     }
@@ -54,7 +59,7 @@ public class TcmseekLlmCompatibleController {
                                           @RequestHeader(value = USER_ID_HEADER, required = false) String userId,
                                           @RequestHeader(value = USERNAME_HEADER, required = false) String username,
                                           @RequestHeader(value = ACCOUNT_HEADER, required = false) String account) {
-        return ApiResult.success(aiChatService.chat(request, new AiRequestContext(requestId, userId, username, account)));
+        return ApiResult.success(tcmReasonChatService.chat(request, new AiRequestContext(requestId, userId, username, account)));
     }
 
     @PostMapping(value = "/aichat", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")

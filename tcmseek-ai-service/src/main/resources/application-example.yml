@@ -73,6 +73,21 @@ tcmseek:
     username: ${TCM_NEO4J_USERNAME:neo4j}
     password: ${TCM_NEO4J_PASSWORD:}
   ai:
+    tcmreason:
+      base-url: ${TCM_REASON_BASE_URL:${TCM_LLM_BASE_URL:}}
+      api-key: ${TCM_REASON_API_KEY:}
+      model: ${TCM_REASON_MODEL:${TCM_LLM_MODEL:TCMReason}}
+      default-max-tokens: ${TCM_REASON_MAX_TOKENS:1024}
+      default-temperature: ${TCM_REASON_TEMPERATURE:0.3}
+      stream: ${TCM_REASON_STREAM:false}
+      verify: ${TCM_REASON_VERIFY:false}
+      connect-timeout: ${TCM_REASON_CONNECT_TIMEOUT:10s}
+      read-timeout: ${TCM_REASON_READ_TIMEOUT:120s}
+      system-prompt: >
+        你是一位资深中医专家，精通辨证论治、中药方剂和经典理论。
+        请根据患者的症状、舌象、脉象等信息，进行严谨的中医辨证分析，
+        并提供治法、方剂（含剂量）、加减建议和生活调护指导。
+        回答需专业、清晰、有理有据，避免西医术语。
     runtime:
       request-timeout: ${AI_REQUEST_TIMEOUT:60s}
       max-retries: ${AI_MAX_RETRIES:1}
