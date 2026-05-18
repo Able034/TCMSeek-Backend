@@ -72,6 +72,7 @@ TCMSeek-Backend/
 |-- tcmseek-web-server/    基于 RuoYi 的业务后端服务工程
 |-- tcmseek-ai-service/    AI 问答微服务
 |-- tcmseek-gateway/       统一网关服务
+|-- db_schema/             MySQL 与 PostgreSQL 建库脚本
 |-- README.md              英文项目文档
 `-- README.zh-CN.md        中文项目文档
 ```
@@ -107,11 +108,16 @@ TCMSeek-Backend/
 
 ## 数据库资料
 
-数据库初始化脚本、图谱数据、导入文件和示例数据可通过以下方式获取：
+本仓库仅提供 MySQL、PostgreSQL 的数据库建表脚本，完整业务数据未直接随仓库发布。
 
-```text
-23yyxiao@stu.edu.cn
-```
+如需用于项目复现、学习或科研测试，可联系作者获取相关数据文件，包括：
+
+- MySQL / PostgreSQL 初始化数据
+- Neo4j 图数据库 dump 文件
+
+联系邮箱：[23yyxiao@stu.edu.cn](mailto:23yyxiao@stu.edu.cn)
+
+说明：完整数据文件因数据来源授权等原因未上传至 GitHub，仅供非商业学习与研究使用。
 
 | 数据库 | 用途 |
 | --- | --- |

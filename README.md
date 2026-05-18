@@ -72,6 +72,7 @@ TCMSeek-Backend/
 |-- tcmseek-web-server/    RuoYi-based business backend
 |-- tcmseek-ai-service/    AI Q&A microservice
 |-- tcmseek-gateway/       Unified gateway service
+|-- db_schema/             MySQL and PostgreSQL schema scripts
 |-- README.md              English project documentation
 `-- README.zh-CN.md        Chinese project documentation
 ```
@@ -107,11 +108,14 @@ TCMSeek-Backend/
 
 ## Database Resources
 
-Database initialization scripts, graph data, import files, and sample datasets are available on request.
+This repository only provides MySQL and PostgreSQL database schema scripts. Complete business data is not published directly in this repository.
 
-```text
-23yyxiao@stu.edu.cn
-```
+For project reproduction, learning, or research testing, contact [23yyxiao@stu.edu.cn](mailto:23yyxiao@stu.edu.cn) to request related data files, including:
+
+- MySQL / PostgreSQL initialization data
+- Neo4j graph database dump files
+
+Complete data files are not uploaded to GitHub because of data source authorization constraints. They are provided only for non-commercial learning and research use.
 
 | Database | Responsibility |
 | --- | --- |

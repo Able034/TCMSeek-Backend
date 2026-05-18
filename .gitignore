@@ -60,9 +60,12 @@ export/
 exports/
 docwork/
 
-# Database initialization scripts and data packages are not published.
+# Local database dumps and data packages are not published.
+# Schema-only scripts under db_schema/ are kept in Git for reproducible setup.
 DB/
 *.sql
+!db_schema/
+!db_schema/*.sql
 
 # ---------------------------------------------------------------------------
 # Secrets and local environment files
