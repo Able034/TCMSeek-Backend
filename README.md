@@ -22,6 +22,10 @@ Backend services for Traditional Chinese Medicine data retrieval, knowledge grap
 
 TCMSeek Backend is a service-oriented backend system for a Traditional Chinese Medicine data platform. It combines a RuoYi-based business backend, a standalone AI microservice, and a Spring Cloud Gateway entry point to support data management, user-facing search, knowledge graph queries, AI Q&A, conversation history, and CSV export.
 
+## Demo
+
+Demo link: [http://120.79.220.11/#/](http://120.79.220.11/#/)
+
 The project is designed around three peer services:
 
 | Service | Role | Default Port |
