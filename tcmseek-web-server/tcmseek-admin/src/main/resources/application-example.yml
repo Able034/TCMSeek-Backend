@@ -125,10 +125,10 @@ target-prediction:
 referer:
   enabled: false
   allowed-domains: localhost,127.0.0.1
-
+#TCMReason模型设置不是deepseek
 llm:
   base-url: ${TCM_LLM_BASE_URL:http://127.0.0.1:8088}
-  model: ${TCM_LLM_MODEL:deepseek-chat}
+  model: ${TCM_LLM_MODEL:TCMReason}
   default-max-tokens: 1024
   default-temperature: 0.3
   stream: false
