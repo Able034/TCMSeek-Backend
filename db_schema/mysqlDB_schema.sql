@@ -1426,7 +1426,7 @@ create index idx_umls
 create index idx_wm_symptom_name
     on wm_symptoms (symptom_name);
 
-create definer = root@localhost view v_disease_target_herb as
+create view v_disease_target_herb as
 select distinct `d`.`disease_id`   AS `disease_id`,
                 `d`.`disease_name` AS `disease_name`,
                 `dg`.`tcm_tar_id`  AS `tcm_tar_id`,
@@ -1434,11 +1434,11 @@ select distinct `d`.`disease_id`   AS `disease_id`,
                 `ct`.`inchikey`    AS `inchikey`,
                 `hc`.`tcm_herb_id` AS `tcm_herb_id`,
                 `h`.`herb_name_zh` AS `herb_name_zh`
-from (((((`ruoyi_vue_demo`.`diseases` `d` join `ruoyi_vue_demo`.`disease_gene_rel` `dg`
-          on ((`d`.`disease_id` = `dg`.`disease_id`))) join `ruoyi_vue_demo`.`targets` `t`
-         on ((`dg`.`tcm_tar_id` = `t`.`tcm_tar_id`))) join `ruoyi_vue_demo`.`compound_target_rel` `ct`
-        on ((`t`.`tcm_tar_id` = `ct`.`tcm_tar_id`))) join `ruoyi_vue_demo`.`herb_compound_rel` `hc`
-       on ((`ct`.`inchikey` = `hc`.`inchikey`))) join `ruoyi_vue_demo`.`core_tcm_herbs` `h`
+from (((((`diseases` `d` join `disease_gene_rel` `dg`
+          on ((`d`.`disease_id` = `dg`.`disease_id`))) join `targets` `t`
+         on ((`dg`.`tcm_tar_id` = `t`.`tcm_tar_id`))) join `compound_target_rel` `ct`
+        on ((`t`.`tcm_tar_id` = `ct`.`tcm_tar_id`))) join `herb_compound_rel` `hc`
+       on ((`ct`.`inchikey` = `hc`.`inchikey`))) join `core_tcm_herbs` `h`
       on ((`hc`.`tcm_herb_id` = `h`.`tcm_herb_id`)));
 
 -- comment on column v_disease_target_herb.disease_id not supported: 疾病ID (DOID:11832)
@@ -1451,7 +1451,7 @@ from (((((`ruoyi_vue_demo`.`diseases` `d` join `ruoyi_vue_demo`.`disease_gene_re
 
 -- comment on column v_disease_target_herb.herb_name_zh not supported: 中药名称（中文）
 
-create definer = root@localhost view v_herb_compound_target as
+create view v_herb_compound_target as
 select `h`.`tcm_herb_id`       AS `tcm_herb_id`,
        `h`.`herb_name_zh`      AS `herb_name_zh`,
        `hc`.`inchikey`         AS `inchikey`,
@@ -1460,10 +1460,10 @@ select `h`.`tcm_herb_id`       AS `tcm_herb_id`,
        `ct`.`tcm_tar_id`       AS `tcm_tar_id`,
        `t`.`symbol`            AS `target_symbol`,
        `t`.`description`       AS `target_description`
-from ((((`ruoyi_vue_demo`.`core_tcm_herbs` `h` join `ruoyi_vue_demo`.`herb_compound_rel` `hc`
-         on ((`h`.`tcm_herb_id` = `hc`.`tcm_herb_id`))) join `ruoyi_vue_demo`.`tcm_compounds` `c`
-        on ((`hc`.`inchikey` = `c`.`inchikey`))) join `ruoyi_vue_demo`.`compound_target_rel` `ct`
-       on ((`c`.`inchikey` = `ct`.`inchikey`))) join `ruoyi_vue_demo`.`targets` `t`
+from ((((`core_tcm_herbs` `h` join `herb_compound_rel` `hc`
+         on ((`h`.`tcm_herb_id` = `hc`.`tcm_herb_id`))) join `tcm_compounds` `c`
+        on ((`hc`.`inchikey` = `c`.`inchikey`))) join `compound_target_rel` `ct`
+       on ((`c`.`inchikey` = `ct`.`inchikey`))) join `targets` `t`
       on ((`ct`.`tcm_tar_id` = `t`.`tcm_tar_id`)));
 
 -- comment on column v_herb_compound_target.tcm_herb_id not supported: 中药唯一标识ID (HERB_1)
@@ -1480,14 +1480,14 @@ from ((((`ruoyi_vue_demo`.`core_tcm_herbs` `h` join `ruoyi_vue_demo`.`herb_compo
 
 -- comment on column v_herb_compound_target.target_description not supported: 基因描述
 
-create definer = root@localhost view v_prescription_herbs as
+create view v_prescription_herbs as
 select `p`.`tcm_prescription_id` AS `tcm_prescription_id`,
        `p`.`name_zh`             AS `prescription_name`,
        `h`.`tcm_herb_id`         AS `tcm_herb_id`,
        `h`.`herb_name_zh`        AS `herb_name_zh`,
        'core'                    AS `herb_type`
-from ((`ruoyi_vue_demo`.`tcm_prescriptions` `p` join `ruoyi_vue_demo`.`prescription_core_herb_rel` `pc`
-       on ((`p`.`tcm_prescription_id` = `pc`.`tcm_prescription_id`))) join `ruoyi_vue_demo`.`core_tcm_herbs` `h`
+from ((`tcm_prescriptions` `p` join `prescription_core_herb_rel` `pc`
+       on ((`p`.`tcm_prescription_id` = `pc`.`tcm_prescription_id`))) join `core_tcm_herbs` `h`
       on ((`pc`.`tcm_herb_id` = `h`.`tcm_herb_id`)))
 union all
 select `p`.`tcm_prescription_id` AS `tcm_prescription_id`,
@@ -1495,6 +1495,6 @@ select `p`.`tcm_prescription_id` AS `tcm_prescription_id`,
        `o`.`tcm_herb2_id`        AS `tcm_herb_id`,
        `o`.`herb_name_zh`        AS `herb_name_zh`,
        'other'                   AS `herb_type`
-from ((`ruoyi_vue_demo`.`tcm_prescriptions` `p` join `ruoyi_vue_demo`.`prescription_other_herb_rel` `po`
-       on ((`p`.`tcm_prescription_id` = `po`.`tcm_prescription_id`))) join `ruoyi_vue_demo`.`other_tcm_herbs` `o`
+from ((`tcm_prescriptions` `p` join `prescription_other_herb_rel` `po`
+       on ((`p`.`tcm_prescription_id` = `po`.`tcm_prescription_id`))) join `other_tcm_herbs` `o`
       on ((`po`.`tcm_herb2_id` = `o`.`tcm_herb2_id`)));
