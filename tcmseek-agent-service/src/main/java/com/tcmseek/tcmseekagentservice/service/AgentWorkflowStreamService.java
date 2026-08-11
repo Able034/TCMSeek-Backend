@@ -5,92 +5,131 @@ import com.tcmseek.tcmseekagentservice.ai.tools.ToolManager;
 import com.tcmseek.tcmseekagentservice.graph.node.AgentWorkflowNodes;
 import com.tcmseek.tcmseekagentservice.graph.node.WorkflowNodeNames;
 import com.tcmseek.tcmseekagentservice.graph.state.WorkflowContext;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.StateGraph;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.bsc.langgraph4j.action.AsyncEdgeAction.edge_async;
 import static org.bsc.langgraph4j.action.AsyncNodeAction.node_async;
 
 /**
- * TCMSeek 多 Agent 工作流应用服务。
+ * 多 Agent 工作流流式服务。
  *
- * <p>这个类只做三件事：
- * 1. 组装 LangGraph4j 状态图；
- * 2. 接收用户 query 并启动图执行；
- * 3. 将最终 WorkflowContext 转成接口返回对象。</p>
- *
- * <p>具体节点逻辑已经抽到 {@link AgentWorkflowNodes}，
- * 避免 service 里混入大量 agent 调用细节。</p>
+ * <p>同步 {@link AgentWorkflowService} 返回完整结果；
+ * 本服务返回 {@link SseEmitter}，边执行图流程边向前端推送节点事件，
+ * 并在最终 summary 阶段推送 answer_delta token。</p>
  */
 @Service
-public class AgentWorkflowService {
+public class AgentWorkflowStreamService {
 
     /**
-     * 工作流所有节点动作和路由判断。
+     * SSE 连接超时时间，单位毫秒。
      */
-    private final AgentWorkflowNodes nodes;
+    private static final long SSE_TIMEOUT_MS = 10 * 60 * 1000L;
 
     /**
-     * 编译后的 LangGraph4j 图实例，服务启动时构建一次，后续请求复用。
+     * 同步 ChatModel，用于意图、实体、规划、Neo4j/MySQL 和 judge 等结构化节点。
      */
-    private final CompiledGraph<MessagesState<String>> graph;
+    private final OpenAiChatModel openAiChatModel;
 
     /**
-     * 构造工作流服务。
+     * 流式 ChatModel，只用于最终 summary token 流。
+     */
+    private final StreamingChatModel streamingChatModel;
+
+    /**
+     * 工具管理器，用于给子 Agent 注入受限工具。
+     */
+    private final ToolManager toolManager;
+
+    /**
+     * 构造流式工作流服务。
      *
-     * @param openAiChatModel LangChain4j 使用的同步 ChatModel
-     * @param toolManager 工具管理器，用于给子 Agent 注入受限工具
+     * @param openAiChatModel 同步 ChatModel
+     * @param streamingChatModel DeepSeek 流式 ChatModel
+     * @param toolManager 工具管理器
      */
-    public AgentWorkflowService(OpenAiChatModel openAiChatModel, ToolManager toolManager) {
-        this.nodes = new AgentWorkflowNodes(openAiChatModel, toolManager);
-        this.graph = buildGraph();
+    public AgentWorkflowStreamService(OpenAiChatModel openAiChatModel,
+                                      @Qualifier("streamingChatModel") StreamingChatModel streamingChatModel,
+                                      ToolManager toolManager) {
+        this.openAiChatModel = openAiChatModel;
+        this.streamingChatModel = streamingChatModel;
+        this.toolManager = toolManager;
     }
 
     /**
-     * 运行一次多 Agent 工作流。
+     * 创建一次 SSE 流式工作流。
      *
      * @param query 用户原始问题
-     * @param maxReplanTimes 最大重规划次数，空值时使用 WorkflowContext 默认值
-     * @return 带最终答案、过程状态和调用记录的完整结果
+     * @param maxReplanTimes 最大重规划次数
+     * @return SSE 连接对象
      */
-    public AgentWorkflowResult run(String query, Integer maxReplanTimes) {
+    public SseEmitter stream(String query, Integer maxReplanTimes) {
         if (!StringUtils.hasText(query)) {
             throw new IllegalArgumentException("query 不能为空");
         }
 
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
         WorkflowContext initialContext = WorkflowContext.start(query.trim(), maxReplanTimes);
-        RunnableConfig config = RunnableConfig.builder()
-                .threadId(initialContext.getTraceId())
-                .build();
+        WorkflowEventPublisher publisher = new WorkflowEventPublisher(emitter, initialContext.getTraceId());
 
-        Optional<MessagesState<String>> finalState = graph.invoke(
-                WorkflowContext.saveContext(initialContext),
-                config
-        );
+        CompletableFuture.runAsync(() -> execute(initialContext, publisher));
 
-        WorkflowContext finalContext = finalState
-                .map(WorkflowContext::requireContext)
-                .orElse(initialContext);
-
-        return toResult(finalContext);
+        return emitter;
     }
 
     /**
-     * 构建 LangGraph4j 状态图。
-     *
-     * <p>固定链路是 intent -> entity -> planner；
-     * planner 之后通过条件边进入 Neo4j、MySQL、judge、summary；
-     * judge 判断证据不足时可以进入 replan，再重新路由。</p>
+     * 后台执行图流程，并负责 SSE 生命周期。
      */
-    private CompiledGraph<MessagesState<String>> buildGraph() {
+    private void execute(WorkflowContext initialContext, WorkflowEventPublisher publisher) {
+        try {
+            publisher.workflowStarted(initialContext);
+
+            AgentWorkflowNodes nodes = new AgentWorkflowNodes(
+                    openAiChatModel,
+                    streamingChatModel,
+                    toolManager,
+                    publisher
+            );
+            CompiledGraph<MessagesState<String>> graph = buildGraph(nodes);
+            RunnableConfig config = RunnableConfig.builder()
+                    .threadId(initialContext.getTraceId())
+                    .build();
+
+            Optional<MessagesState<String>> finalState = graph.invoke(
+                    WorkflowContext.saveContext(initialContext),
+                    config
+            );
+
+            WorkflowContext finalContext = finalState
+                    .map(WorkflowContext::requireContext)
+                    .orElse(initialContext);
+            publisher.workflowDone(toResult(finalContext));
+            publisher.complete();
+        } catch (Exception e) {
+            publisher.error(e);
+            publisher.completeWithError(e);
+        }
+    }
+
+    /**
+     * 为单次流式请求构建 LangGraph4j 图。
+     *
+     * <p>图结构和同步服务保持一致，但 nodes 中带有 SSE publisher，
+     * 因此节点执行时会额外推送进度事件。</p>
+     */
+    private CompiledGraph<MessagesState<String>> buildGraph(AgentWorkflowNodes nodes) {
         try {
             StateGraph<MessagesState<String>> stateGraph = new StateGraph<>(
                     MessagesState.SCHEMA,
@@ -122,12 +161,12 @@ public class AgentWorkflowService {
             compiledGraph.setMaxIterations(32);
             return compiledGraph;
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to build TCMSeek agent workflow graph", e);
+            throw new IllegalStateException("Failed to build TCMSeek streaming agent workflow graph", e);
         }
     }
 
     /**
-     * 将图状态转换为 HTTP/API 层返回对象。
+     * 将最终上下文转换为和同步接口一致的返回结构，作为 workflow_done 事件负载。
      */
     private AgentWorkflowResult toResult(WorkflowContext context) {
         return AgentWorkflowResult.builder()

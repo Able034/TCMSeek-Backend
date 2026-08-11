@@ -14,8 +14,12 @@ import com.tcmseek.tcmseekagentservice.ai.model.workflow.AnswerJudgeResult;
 import com.tcmseek.tcmseekagentservice.ai.model.workflow.PlanResult;
 import com.tcmseek.tcmseekagentservice.ai.tools.ToolManager;
 import com.tcmseek.tcmseekagentservice.graph.state.WorkflowContext;
+import com.tcmseek.tcmseekagentservice.service.WorkflowEventPublisher;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
@@ -23,6 +27,9 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.tcmseek.tcmseekagentservice.graph.node.WorkflowNodeNames.ENTITY;
 import static com.tcmseek.tcmseekagentservice.graph.node.WorkflowNodeNames.INTENT;
@@ -77,12 +84,39 @@ public class AgentWorkflowNodes {
     private final AiSummaryService aiSummaryService;
 
     /**
+     * 最终总结阶段使用的流式模型；同步链路中可以为空。
+     */
+    private final StreamingChatModel streamingChatModel;
+
+    /**
+     * 工作流事件发布器；同步链路使用 no-op 发布器。
+     */
+    private final WorkflowEventPublisher eventPublisher;
+
+    /**
      * 构造所有节点所需的 LangChain4j Agent 代理。
      *
      * @param openAiChatModel 当前服务统一使用的 ChatModel
      * @param toolManager 工具管理器，用于给不同子 Agent 注入受限工具集合
      */
     public AgentWorkflowNodes(OpenAiChatModel openAiChatModel, ToolManager toolManager) {
+        this(openAiChatModel, null, toolManager, WorkflowEventPublisher.noop());
+    }
+
+    /**
+     * 构造所有节点所需的 LangChain4j Agent 代理，并绑定可选的流式输出能力。
+     *
+     * @param openAiChatModel 当前服务统一使用的同步 ChatModel
+     * @param streamingChatModel 最终回答使用的流式 ChatModel，非流式链路可以为空
+     * @param toolManager 工具管理器，用于给不同子 Agent 注入受限工具集合
+     * @param eventPublisher SSE 事件发布器，非流式链路使用 no-op 发布器
+     */
+    public AgentWorkflowNodes(OpenAiChatModel openAiChatModel,
+                              StreamingChatModel streamingChatModel,
+                              ToolManager toolManager,
+                              WorkflowEventPublisher eventPublisher) {
+        this.streamingChatModel = streamingChatModel;
+        this.eventPublisher = eventPublisher == null ? WorkflowEventPublisher.noop() : eventPublisher;
         this.aiClassifyService = AiServices.builder(AiClassifyService.class)
                 .chatModel(openAiChatModel)
                 .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(20))
@@ -135,6 +169,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(INTENT);
+        eventPublisher.nodeStarted(context, INTENT);
         try {
             ClassifyCodeResult result = aiClassifyService.classifyQuery(memoryId(context, INTENT), context.getOriginalPrompt());
             context.setIntentResult(result);
@@ -145,7 +180,9 @@ public class AgentWorkflowNodes {
             context.setIntentResult(fallback);
             context.recordError(INTENT, "AiClassifyService", "classifyQuery",
                     Map.of("query", context.getOriginalPrompt()), e, elapsed(start));
+            eventPublisher.nodeFailed(context, INTENT, e);
         }
+        eventPublisher.nodeFinished(context, INTENT, Map.of("intentResult", context.getIntentResult()));
         return WorkflowContext.saveContext(context);
     }
 
@@ -158,6 +195,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(ENTITY);
+        eventPublisher.nodeStarted(context, ENTITY);
         try {
             NormalizeEntityResult result = aiNormalizeEntityService.normalizeEntity(memoryId(context, ENTITY), context.getOriginalPrompt());
             context.setEntityResult(result);
@@ -169,7 +207,9 @@ public class AgentWorkflowNodes {
             context.setEntityResult(fallback);
             context.recordError(ENTITY, "AiNormalizeEntityService", "normalizeEntity",
                     Map.of("query", context.getOriginalPrompt()), e, elapsed(start));
+            eventPublisher.nodeFailed(context, ENTITY, e);
         }
+        eventPublisher.nodeFinished(context, ENTITY, Map.of("entityResult", context.getEntityResult()));
         return WorkflowContext.saveContext(context);
     }
 
@@ -183,6 +223,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(PLANNER);
+        eventPublisher.nodeStarted(context, PLANNER);
         try {
             PlanResult result = aiPlannerService.plan(
                     memoryId(context, PLANNER),
@@ -201,7 +242,9 @@ public class AgentWorkflowNodes {
             context.setPlanResult(ruleBasedPlan(context, "规划 Agent 调用失败：" + e.getMessage()));
             context.recordError(PLANNER, "AiPlannerService", "plan",
                     Map.of("query", context.getOriginalPrompt()), e, elapsed(start));
+            eventPublisher.nodeFailed(context, PLANNER, e);
         }
+        eventPublisher.nodeFinished(context, PLANNER, Map.of("planResult", context.getPlanResult()));
         return WorkflowContext.saveContext(context);
     }
 
@@ -214,6 +257,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(NEO4J);
+        eventPublisher.nodeStarted(context, NEO4J);
         try {
             String result = aiSearchService.searchByNeo4j(
                     memoryId(context, NEO4J),
@@ -231,7 +275,9 @@ public class AgentWorkflowNodes {
                     Map.of("query", context.getOriginalPrompt(), "entity", json(context.getEntityResult())),
                     e,
                     elapsed(start));
+            eventPublisher.nodeFailed(context, NEO4J, e);
         }
+        eventPublisher.nodeFinished(context, NEO4J, Map.of("neo4jResult", context.getNeo4jResult()));
         return WorkflowContext.saveContext(context);
     }
 
@@ -244,6 +290,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(MYSQL);
+        eventPublisher.nodeStarted(context, MYSQL);
         try {
             String result = aiMysqlSearchService.searchMysqlDetails(
                     memoryId(context, MYSQL),
@@ -266,7 +313,9 @@ public class AgentWorkflowNodes {
                     Map.of("query", context.getOriginalPrompt()),
                     e,
                     elapsed(start));
+            eventPublisher.nodeFailed(context, MYSQL, e);
         }
+        eventPublisher.nodeFinished(context, MYSQL, Map.of("mysqlResult", context.getMysqlResult()));
         return WorkflowContext.saveContext(context);
     }
 
@@ -279,6 +328,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(JUDGE);
+        eventPublisher.nodeStarted(context, JUDGE);
         try {
             AnswerJudgeResult result = aiAnswerJudgeService.judge(
                     memoryId(context, JUDGE),
@@ -296,7 +346,9 @@ public class AgentWorkflowNodes {
             context.setAnswerJudgeResult(fallbackJudge(context, "判断 Agent 调用失败：" + e.getMessage()));
             context.recordError(JUDGE, "AiAnswerJudgeService", "judge",
                     Map.of("query", context.getOriginalPrompt()), e, elapsed(start));
+            eventPublisher.nodeFailed(context, JUDGE, e);
         }
+        eventPublisher.nodeFinished(context, JUDGE, Map.of("answerJudgeResult", context.getAnswerJudgeResult()));
         return WorkflowContext.saveContext(context);
     }
 
@@ -310,6 +362,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(REPLAN);
+        eventPublisher.nodeStarted(context, REPLAN);
         context.increaseReplanTimes();
         String reason = context.getAnswerJudgeResult() == null
                 ? "证据不足，需要重新规划"
@@ -336,7 +389,12 @@ public class AgentWorkflowNodes {
                     Map.of("query", context.getOriginalPrompt(), "reason", reason),
                     e,
                     elapsed(start));
+            eventPublisher.nodeFailed(context, REPLAN, e);
         }
+        eventPublisher.nodeFinished(context, REPLAN, Map.of(
+                "planResult", context.getPlanResult(),
+                "replanTimes", context.getReplanTimes()
+        ));
         return WorkflowContext.saveContext(context);
     }
 
@@ -350,6 +408,7 @@ public class AgentWorkflowNodes {
         WorkflowContext context = WorkflowContext.requireContext(state);
         long start = System.currentTimeMillis();
         context.setCurrentStep(SUMMARY);
+        eventPublisher.nodeStarted(context, SUMMARY);
         if (needsUserInput(context)) {
             String result = buildAskUserAnswer(context);
             context.setFinalAnswer(result);
@@ -357,8 +416,32 @@ public class AgentWorkflowNodes {
                     Map.of("query", context.getOriginalPrompt()),
                     result,
                     elapsed(start));
+            eventPublisher.answerDelta(context, result);
+            eventPublisher.answerDone(context, result);
+            eventPublisher.nodeFinished(context, SUMMARY, Map.of("finalAnswer", result));
             return WorkflowContext.saveContext(context);
         }
+
+        if (eventPublisher.isEnabled() && streamingChatModel != null) {
+            try {
+                String result = streamSummary(context);
+                context.setFinalAnswer(result);
+                context.recordCall(SUMMARY, "StreamingChatModel", "streamSummary",
+                        Map.of("query", context.getOriginalPrompt()),
+                        result,
+                        elapsed(start));
+            } catch (Exception e) {
+                context.setFinalAnswer("抱歉，当前无法生成最终回答：" + e.getMessage());
+                context.recordError(SUMMARY, "StreamingChatModel", "streamSummary",
+                        Map.of("query", context.getOriginalPrompt()),
+                        e,
+                        elapsed(start));
+                eventPublisher.nodeFailed(context, SUMMARY, e);
+            }
+            eventPublisher.nodeFinished(context, SUMMARY, Map.of("finalAnswer", context.getFinalAnswer()));
+            return WorkflowContext.saveContext(context);
+        }
+
         try {
             String mysqlResultWithJudge = context.getMysqlResult()
                     + "\n\n证据完整性判断："
@@ -382,8 +465,121 @@ public class AgentWorkflowNodes {
                     Map.of("query", context.getOriginalPrompt()),
                     e,
                     elapsed(start));
+            eventPublisher.nodeFailed(context, SUMMARY, e);
         }
+        eventPublisher.nodeFinished(context, SUMMARY, Map.of("finalAnswer", context.getFinalAnswer()));
         return WorkflowContext.saveContext(context);
+    }
+
+    /**
+     * 使用 StreamingChatModel 生成最终回答，并把 token 片段推送给前端。
+     *
+     * <p>LangGraph4j 节点仍然必须等完整回答生成后才能返回状态；
+     * 这里通过 CountDownLatch 等待流式模型完成，同时在 onPartialResponse 中推送 answer_delta。</p>
+     */
+    private String streamSummary(WorkflowContext context) throws InterruptedException {
+        StringBuilder answerBuilder = new StringBuilder();
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        AtomicReference<ChatResponse> responseRef = new AtomicReference<>();
+
+        streamingChatModel.chat(buildSummaryPrompt(context), new StreamingChatResponseHandler() {
+            /**
+             * 每收到一个 token 片段，就追加到最终答案并推送 SSE delta。
+             */
+            @Override
+            public void onPartialResponse(String partialResponse) {
+                if (partialResponse == null || partialResponse.isEmpty()) {
+                    return;
+                }
+                answerBuilder.append(partialResponse);
+                eventPublisher.answerDelta(context, partialResponse);
+            }
+
+            /**
+             * 模型完成后保存完整响应，唤醒当前节点继续返回 LangGraph4j 状态。
+             */
+            @Override
+            public void onCompleteResponse(ChatResponse response) {
+                responseRef.set(response);
+                done.countDown();
+            }
+
+            /**
+             * 模型调用失败时记录异常，唤醒当前节点走失败兜底。
+             */
+            @Override
+            public void onError(Throwable error) {
+                errorRef.set(error);
+                done.countDown();
+            }
+        });
+
+        boolean completed = done.await(180, TimeUnit.SECONDS);
+        if (!completed) {
+            throw new IllegalStateException("流式总结超时");
+        }
+        if (errorRef.get() != null) {
+            throw new IllegalStateException("流式总结失败：" + errorRef.get().getMessage(), errorRef.get());
+        }
+
+        String finalAnswer = answerBuilder.toString();
+        ChatResponse response = responseRef.get();
+        if (!StringUtils.hasText(finalAnswer)
+                && response != null
+                && response.aiMessage() != null
+                && response.aiMessage().text() != null) {
+            finalAnswer = response.aiMessage().text();
+        }
+        eventPublisher.answerDone(context, finalAnswer);
+        return finalAnswer;
+    }
+
+    /**
+     * 构造最终总结提示词。
+     *
+     * <p>流式接口不走 AiSummaryService 的注解 prompt，而是直接调用 StreamingChatModel，
+     * 因此这里显式写出和同步总结 Agent 等价的约束。</p>
+     */
+    private String buildSummaryPrompt(WorkflowContext context) {
+        return """
+                你是 TCMSeek 查询结果总结代理。
+
+                职责：
+                - 只根据上游 agent 的结果回答用户。
+                - 不调用任何工具。
+                - 不编造 Neo4j 或 MySQL 没有返回的信息。
+                - 优先合并 Neo4j 的关系结果和 MySQL 的实体详情结果。
+                - 如果某一路没有查到结果，要明确说明该路未查到或未执行。
+                - 回答要结构化、简洁，适合直接展示给用户。
+
+                用户问题：
+                %s
+
+                意图识别结果：
+                %s
+
+                实体识别结果：
+                %s
+
+                Neo4j 查询结果：
+                %s
+
+                MySQL 查询结果：
+                %s
+
+                证据完整性判断：
+                %s
+
+                请用中文生成最终回答。
+                """.formatted(
+                context.getOriginalPrompt(),
+                json(context.getIntentResult()),
+                json(context.getEntityResult()),
+                context.getNeo4jResult(),
+                context.getMysqlResult(),
+                json(context.getAnswerJudgeResult())
+        );
     }
 
     /**
