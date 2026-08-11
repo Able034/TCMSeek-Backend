@@ -38,6 +38,9 @@ public class AgentWorkflowStreamController {
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestBody AgentStreamChatRequest request) {
+        if(request.maxReplanTimes()==null || request.maxReplanTimes() == 0 ){
+            return agentWorkflowStreamService.stream(request.query(),2);
+        }
         return agentWorkflowStreamService.stream(request.query(), request.maxReplanTimes());
     }
 

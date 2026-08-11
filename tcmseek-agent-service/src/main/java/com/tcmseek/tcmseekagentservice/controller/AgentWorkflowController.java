@@ -33,6 +33,9 @@ public class AgentWorkflowController {
      */
     @PostMapping("/chat")
     public AgentWorkflowResult chat(@RequestBody AgentChatRequest request) {
+        if(request.maxReplanTimes()==null || request.maxReplanTimes() == 0 ){
+           return agentWorkflowService.run(request.query(),2);
+        }
         return agentWorkflowService.run(request.query(), request.maxReplanTimes());
     }
 
