@@ -1,0 +1,72 @@
+server:
+  port: 8088
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: tcmseek-agent-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${AGENT_MYSQL_URL:jdbc:mysql://127.0.0.1:3306/tcmseek?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2B8}
+    username: ${AGENT_MYSQL_USERNAME:root}
+    password: ${AGENT_MYSQL_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${AGENT_MYSQL_POOL_SIZE:5}
+      minimum-idle: ${AGENT_MYSQL_MIN_IDLE:1}
+      connection-timeout: ${AGENT_MYSQL_CONNECT_TIMEOUT_MS:5000}
+      initialization-fail-timeout: ${AGENT_MYSQL_INIT_FAIL_TIMEOUT:-1}
+  data:
+    redis:
+      host:
+      port:
+      database:
+      password:
+      timeout:
+  cloud:
+    nacos:
+      discovery:
+        server-addr:
+        namespace:
+        group:
+        enabled:
+        register-enabled:
+        metadata:
+          version:
+          service-name:
+          framework:
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+logging:
+  level:
+    com.tcmseek.ai: info
+    com.tcmseek.ai.graph: debug
+    org.springframework.ai: info
+
+tcmseek:
+  llm:
+    deepseek:
+      api-key: ${AGENT_DEEPSEEK_API_KEY:not-configured}
+      model-name: ${AGENT_DEEPSEEK_MODEL:deepseek-v4-flash}
+      base-url: ${AGENT_DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    qwen:
+      api-key: ${AGENT_QWEN_API_KEY:not-configured}
+      model-name: ${AGENT_QWEN_MODEL:qwen3.7-max}
+      base-url: ${AGENT_QWEN_BASE_URL:https://llm-cb8m35te86kmvufg.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+  neo4j:
+    uri: neo4j://192.168.245.128/:7688
+    username: neo4j
+    password: 12345678
