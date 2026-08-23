@@ -119,11 +119,23 @@ public class WorkflowContext implements Serializable {
      * @return 初始化后的上下文对象
      */
     public static WorkflowContext start(String query, Integer maxReplanTimes) {
+        return start(query, query, maxReplanTimes);
+    }
+
+    /**
+     * 创建一次带会话记忆增强的工作流执行上下文。
+     *
+     * @param query 用户原始问题
+     * @param enhancedPrompt 注入最近对话、摘要和长期记忆后的问题
+     * @param maxReplanTimes 最大重规划次数，空值时默认 2 次
+     * @return 初始化后的上下文对象
+     */
+    public static WorkflowContext start(String query, String enhancedPrompt, Integer maxReplanTimes) {
         return WorkflowContext.builder()
                 .traceId(UUID.randomUUID().toString())
                 .currentStep("START")
                 .originalPrompt(query)
-                .enhancedPrompt(query)
+                .enhancedPrompt(enhancedPrompt == null || enhancedPrompt.isBlank() ? query : enhancedPrompt)
                 .neo4jResult("未执行 Neo4j 查询")
                 .mysqlResult("未执行 MySQL 查询")
                 .replanTimes(0)

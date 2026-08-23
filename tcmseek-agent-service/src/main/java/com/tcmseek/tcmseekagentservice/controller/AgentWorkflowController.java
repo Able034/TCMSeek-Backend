@@ -1,9 +1,11 @@
 package com.tcmseek.tcmseekagentservice.controller;
 
 import com.tcmseek.tcmseekagentservice.ai.model.workflow.AgentWorkflowResult;
+import com.tcmseek.tcmseekagentservice.service.AgentRequestContext;
 import com.tcmseek.tcmseekagentservice.service.AgentWorkflowService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,6 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/agent")
 public class AgentWorkflowController {
+
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
+
+    private static final String USER_ID_HEADER = "X-User-Id";
+
+    private static final String USERNAME_HEADER = "X-User-Name";
+
+    private static final String ACCOUNT_HEADER = "X-User-Account";
 
     /**
      * 工作流应用服务。
@@ -32,11 +42,16 @@ public class AgentWorkflowController {
      * @return 工作流完整执行结果
      */
     @PostMapping("/chat")
-    public AgentWorkflowResult chat(@RequestBody AgentChatRequest request) {
+    public AgentWorkflowResult chat(@RequestBody AgentChatRequest request,
+                                    @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
+                                    @RequestHeader(value = USER_ID_HEADER, required = false) String userId,
+                                    @RequestHeader(value = USERNAME_HEADER, required = false) String username,
+                                    @RequestHeader(value = ACCOUNT_HEADER, required = false) String account) {
+        AgentRequestContext context = new AgentRequestContext(requestId, userId, username, account);
         if(request.maxReplanTimes()==null || request.maxReplanTimes() == 0 ){
-           return agentWorkflowService.run(request.query(),2);
+           return agentWorkflowService.run(request.query(),2, request.sessionId(), context);
         }
-        return agentWorkflowService.run(request.query(), request.maxReplanTimes());
+        return agentWorkflowService.run(request.query(), request.maxReplanTimes(), request.sessionId(), context);
     }
 
 
@@ -47,7 +62,8 @@ public class AgentWorkflowController {
      *
      * @param query 用户原始问题
      * @param maxReplanTimes 最大重规划次数，可为空
+     * @param sessionId 会话 ID，可为空
      */
-    public record AgentChatRequest(String query, Integer maxReplanTimes) {
+    public record AgentChatRequest(String query, Integer maxReplanTimes, String sessionId) {
     }
 }

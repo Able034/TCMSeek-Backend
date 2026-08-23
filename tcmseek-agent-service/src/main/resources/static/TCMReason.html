@@ -1,0 +1,1435 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCMReason</title>
+  <style>
+    :root {
+      --page: #f4f7f6;
+      --panel: #ffffff;
+      --muted-panel: #fafafa;
+      --line: #dbe7e1;
+      --line-strong: #c8d8cf;
+      --text: #26362e;
+      --muted: #66766d;
+      --subtle: #8a9890;
+      --green: #1a5f4a;
+      --green-soft: #edf8f2;
+      --green-bright: #2d8659;
+      --blue: #4077b8;
+      --blue-dark: #245480;
+      --blue-soft: #f0f4ff;
+      --amber: #d89c22;
+      --red: #b42318;
+      --red-soft: #fff5f5;
+      --shadow: 0 6px 18px rgba(31, 61, 49, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .agent-container {
+      width: min(1280px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 34px;
+    }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .agent-title h1 {
+      margin: 0;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 26px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .header-icon,
+    .section-icon,
+    .inline-icon {
+      width: 1.1em;
+      height: 1.1em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    .agent-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 8px;
+      background: var(--green-soft);
+      color: var(--green);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .icon-btn:hover:not(:disabled) {
+      background: var(--green-bright);
+      color: #fff;
+    }
+
+    .icon-btn:disabled,
+    .question-tag:disabled,
+    .send-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .error-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #f8b4b4;
+      background: var(--red-soft);
+      color: var(--red);
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+
+    .error-banner.visible {
+      display: flex;
+    }
+
+    .chat-panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .messages {
+      min-height: 430px;
+      max-height: calc(100vh - 302px);
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--muted-panel);
+    }
+
+    .welcome-message {
+      text-align: center;
+      padding: 78px 20px;
+      color: var(--muted);
+    }
+
+    .welcome-message h2 {
+      color: var(--green-bright);
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 21px;
+      letter-spacing: 0;
+    }
+
+    .welcome-message p {
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      animation: slide-in 0.25s ease;
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-bright) 0%, var(--green) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .message.user .message-avatar {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    }
+
+    .assistant-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.18);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    .message-content {
+      max-width: min(760px, 74%);
+      min-width: 0;
+    }
+
+    .message.user .message-content {
+      text-align: right;
+    }
+
+    .thinking-panel {
+      margin: 2px 0 10px;
+      color: #68737d;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .thinking-toggle {
+      border: none;
+      background: transparent;
+      color: #59636e;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .thinking-toggle:hover {
+      color: var(--green);
+    }
+
+    .thinking-icon {
+      color: #4f66ff;
+      font-size: 17px;
+    }
+
+    .thinking-arrow {
+      color: #7a858f;
+      font-size: 14px;
+      transition: transform 0.2s ease;
+    }
+
+    .thinking-panel.collapsed .thinking-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .thinking-list {
+      margin-top: 10px;
+      padding-left: 8px;
+      border-left: 1px solid #d9e2ea;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .thinking-panel.collapsed .thinking-list {
+      display: none;
+    }
+
+    .thinking-item {
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .thinking-dot {
+      width: 6px;
+      height: 6px;
+      margin-top: 9px;
+      border-radius: 50%;
+      background: #a7b0b8;
+    }
+
+    .thinking-item.running .thinking-dot {
+      background: var(--amber);
+    }
+
+    .thinking-item.success .thinking-dot {
+      background: #87a496;
+    }
+
+    .thinking-item.failed .thinking-dot {
+      background: #c24d44;
+    }
+
+    .thinking-body {
+      min-width: 0;
+    }
+
+    .thinking-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .thinking-row span {
+      color: #616b75;
+    }
+
+    .thinking-row small {
+      color: #9aa3ab;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .thinking-body p {
+      margin: 4px 0 0;
+      color: #737d86;
+      overflow-wrap: anywhere;
+    }
+
+    .thinking-detail {
+      margin-top: 5px;
+    }
+
+    .thinking-detail summary {
+      color: #7d8994;
+      cursor: pointer;
+      font-size: 12px;
+      user-select: none;
+    }
+
+    .thinking-detail pre {
+      max-height: 180px;
+      overflow: auto;
+      margin: 6px 0 0;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #f5f7f6;
+      color: #68737d;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .message-text {
+      background: var(--panel);
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(31, 61, 49, 0.1);
+      color: var(--text);
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+    }
+
+    .message.user .message-text {
+      background: linear-gradient(135deg, var(--green-bright) 0%, var(--green) 100%);
+      color: #fff;
+    }
+
+    .message.pending .message-text {
+      background: var(--blue-soft);
+      color: #4a5568;
+    }
+
+    .message.error .message-text {
+      background: #ffecec;
+      color: var(--red);
+    }
+
+    .message-time {
+      margin-top: 5px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: #f3f9ff;
+      color: var(--green);
+      font-size: 13px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .typing-indicator.visible {
+      display: flex;
+    }
+
+    .loading-symbol {
+      animation: spin 1s linear infinite;
+      display: inline-flex;
+    }
+
+    .input-area {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 10px;
+      padding: 15px;
+      background: var(--panel);
+      border-top: 2px solid #e0e0e0;
+    }
+
+    .agent-input {
+      width: 100%;
+      min-height: 48px;
+      max-height: 120px;
+      resize: vertical;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .agent-input:focus {
+      border-color: var(--green-bright);
+      box-shadow: 0 0 0 3px rgba(45, 134, 89, 0.1);
+    }
+
+    .send-btn,
+    .stop-btn {
+      min-height: 48px;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, var(--green-bright) 0%, var(--green) 100%);
+    }
+
+    .stop-btn {
+      background: var(--red);
+    }
+
+    .send-btn:hover:not(:disabled),
+    .stop-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(31, 61, 49, 0.2);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .quick-questions {
+      margin-top: 18px;
+    }
+
+    .quick-questions h2 {
+      color: var(--green);
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .question-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .question-tag {
+      padding: 8px 16px;
+      background: #f0f9f5;
+      border: 1px solid var(--green-bright);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+      font-size: 14px;
+      color: var(--green-bright);
+      line-height: 1.45;
+      text-align: left;
+    }
+
+    .question-tag:hover:not(:disabled) {
+      background: var(--green-bright);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .message-text code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #f1f5f3;
+      color: var(--green);
+      font-family: Consolas, Monaco, monospace;
+      font-size: 0.92em;
+    }
+
+    .message.user .message-text code {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
+    .markdown-heading {
+      margin: 14px 0 8px;
+      color: var(--green);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .markdown-hr {
+      border: none;
+      border-top: 1px solid #e0ebe5;
+      margin: 14px 0;
+    }
+
+    .markdown-list {
+      margin: 8px 0 10px 18px;
+      padding: 0;
+    }
+
+    .markdown-list li {
+      margin: 4px 0;
+      padding-left: 2px;
+    }
+
+    .markdown-table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 12px 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .markdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .markdown-table th,
+    .markdown-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e7eee9;
+      text-align: left;
+      vertical-align: top;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .markdown-table th {
+      background: #eef8f3;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .markdown-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    @keyframes slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .messages {
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .agent-container {
+        width: min(100% - 24px, 1280px);
+        padding-top: 18px;
+      }
+
+      .agent-title h1 {
+        font-size: 23px;
+      }
+
+      .messages {
+        padding: 14px;
+      }
+
+      .input-area {
+        grid-template-columns: 1fr;
+      }
+
+      .message-content {
+        max-width: 82%;
+      }
+
+      .thinking-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="agent-container">
+    <header class="agent-header">
+      <div class="agent-title">
+        <h1><span class="header-icon" aria-hidden="true">◇</span>TCMReason</h1>
+      </div>
+      <div class="agent-controls">
+        <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear" disabled>↻</button>
+      </div>
+    </header>
+
+    <div id="errorBanner" class="error-banner" role="alert">
+      <span class="inline-icon" aria-hidden="true">!</span>
+      <span id="errorText"></span>
+    </div>
+
+    <section class="chat-panel" aria-label="TCMReason chat">
+      <div id="messages" class="messages" aria-live="polite">
+        <div id="welcomeMessage" class="welcome-message">
+          <h2><span class="section-icon" aria-hidden="true">⌬</span>TCMReason</h2>
+          <p>Ask the fine-tuned Qwen model and keep the conversation context across turns.</p>
+        </div>
+      </div>
+
+      <div id="typingIndicator" class="typing-indicator">
+        <span class="loading-symbol" aria-hidden="true">◌</span>
+        <span id="runningText">Agent is processing</span>
+      </div>
+
+      <div class="input-area">
+        <textarea id="agentInput" class="agent-input" rows="2" placeholder="Example: shared target information for Ginseng and Tangerine Peel"></textarea>
+        <button id="sendBtn" class="send-btn" type="button" disabled>
+          <span aria-hidden="true">➤</span>
+          <span>Send</span>
+        </button>
+        <button id="stopBtn" class="stop-btn hidden" type="button">
+          <span aria-hidden="true">■</span>
+          <span>Stop</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="quick-questions" aria-label="Quick questions">
+      <h2><span class="section-icon" aria-hidden="true">✦</span>Quick Questions</h2>
+      <div id="questionTags" class="question-tags"></div>
+    </section>
+  </main>
+
+  <script>
+    const DETAIL_LIMIT = 6000;
+    const SUMMARY_LIMIT = 160;
+    const DEFAULT_PENDING_TEXT = 'Qwen is answering...';
+    const API_URL = '/agentqwen/chat/stream';
+    const DEMO_USER_ID = 'showmodel-default-user';
+    const DEMO_USERNAME = 'showmodel';
+    const DEMO_ACCOUNT = 'showmodel';
+    const DEMO_SESSION_ID = 'showmodel-default-session';
+
+    const quickQuestions = [
+      'Shared target information for Ginseng and Tangerine Peel',
+      'Diabetes-related pathways treated by Astragalus',
+      'Common active targets of Salvia miltiorrhiza and Chuanxiong',
+      'Formula-herb relationships for Cinnamon Twig Decoction'
+    ];
+
+    const nodeNameMap = {
+      intent: 'Intent recognition',
+      entity: 'Entity recognition',
+      planner: 'Main agent planning',
+      neo4j_agent: 'Neo4j sub-agent',
+      mysql_agent: 'MySQL sub-agent',
+      answer_judge: 'Answer evaluation',
+      replan: 'Replanning',
+      summary: 'Final summary'
+    };
+
+    const eventTitleMap = {
+      chat_started: 'Qwen chat started',
+      chat_done: 'Qwen chat completed',
+      workflow_started: 'Workflow started',
+      answer_done: 'Answer completed',
+      workflow_done: 'Workflow completed',
+      error: 'Chat error'
+    };
+
+    const state = {
+      isLoading: false,
+      errorMessage: '',
+      messages: [],
+      workflowEvents: [],
+      finalWorkflowResult: null,
+      activeAssistant: null,
+      abortController: null,
+      scrollTimer: null,
+      streamRenderFrame: null,
+      manualStopRequested: false,
+      eventIndex: 0
+    };
+
+    const refs = {
+      clearBtn: document.getElementById('clearBtn'),
+      errorBanner: document.getElementById('errorBanner'),
+      errorText: document.getElementById('errorText'),
+      messages: document.getElementById('messages'),
+      welcomeMessage: document.getElementById('welcomeMessage'),
+      typingIndicator: document.getElementById('typingIndicator'),
+      runningText: document.getElementById('runningText'),
+      agentInput: document.getElementById('agentInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      stopBtn: document.getElementById('stopBtn'),
+      questionTags: document.getElementById('questionTags')
+    };
+
+    const formatTime = (value) => {
+      const date = value ? new Date(value) : new Date();
+      const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+      return safeDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    };
+
+    const escapeHtml = (value = '') =>
+      String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const compactText = (value) => {
+      if (value === undefined || value === null || value === '') return '';
+      const text = typeof value === 'string' ? value : JSON.stringify(value);
+      return text.replace(/\s+/g, ' ').trim();
+    };
+
+    const limitText = (value, limit) => {
+      const text = compactText(value);
+      if (!text) return '';
+      return text.length > limit ? `${text.slice(0, limit)}...` : text;
+    };
+
+    const formatDetail = (value) => {
+      if (value === undefined || value === null || value === '') return '';
+      const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+      return text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}\n...` : text;
+    };
+
+    const formatDuration = (message) => {
+      const startedAt = message && message.thinkingStartedAt;
+      if (!startedAt) return '0 sec';
+      const finishedAt = message.thinkingFinishedAt || Date.now();
+      const seconds = Math.max(1, Math.round((finishedAt - startedAt) / 1000));
+      return `${seconds} sec`;
+    };
+
+    const thinkingStatusText = (message) =>
+      message && message.thinkingDone ? `Reasoning complete (${formatDuration(message)})` : 'Thinking';
+
+    const nodeLabel = (nodeName) => nodeNameMap[nodeName] || nodeName || 'Workflow';
+
+    const buildTitle = (type, nodeName) => {
+      if (type === 'node_started') return `${nodeLabel(nodeName)} started`;
+      if (type === 'node_finished') return `${nodeLabel(nodeName)} completed`;
+      if (type === 'node_failed') return `${nodeLabel(nodeName)} failed`;
+      return eventTitleMap[type] || type || 'Workflow event';
+    };
+
+    const summarizePayload = (type, nodeName, data = {}) => {
+      if (type === 'workflow_started') return limitText(data.query, SUMMARY_LIMIT);
+      if (type === 'chat_started') return limitText(data.query, SUMMARY_LIMIT);
+      if (type === 'chat_done') return data.latencyMs ? `Final answer completed in ${data.latencyMs} ms` : 'Final answer completed';
+      if (type === 'node_started') return data.currentStep ? `Current step: ${data.currentStep}` : '';
+      if (type === 'node_failed' || type === 'error') return data.message || 'Execution error';
+      if (type === 'answer_done') return '';
+      if (type === 'workflow_done') {
+        const callCount = Array.isArray(data.callRecords) ? data.callRecords.length : 0;
+        return `Final answer completed, ${callCount} call record${callCount === 1 ? '' : 's'}`;
+      }
+
+      if (nodeName === 'intent') return limitText(data.intentResult || data, SUMMARY_LIMIT);
+      if (nodeName === 'entity') return limitText(data.entityResult || data, SUMMARY_LIMIT);
+      if (nodeName === 'planner' || nodeName === 'replan') return limitText(data.planResult || data, SUMMARY_LIMIT);
+      if (nodeName === 'neo4j_agent') return limitText(data.neo4jResult || data, SUMMARY_LIMIT);
+      if (nodeName === 'mysql_agent') return limitText(data.mysqlResult || data, SUMMARY_LIMIT);
+      if (nodeName === 'answer_judge') return limitText(data.answerJudgeResult || data, SUMMARY_LIMIT);
+      if (nodeName === 'summary') return '';
+      return limitText(data, SUMMARY_LIMIT);
+    };
+
+    const statusByEvent = (type) => {
+      if (type === 'node_started') return 'running';
+      if (type === 'node_failed' || type === 'error') return 'failed';
+      if (type === 'node_finished' || type === 'answer_done' || type === 'workflow_done' || type === 'chat_done') return 'success';
+      return 'info';
+    };
+
+    const createWorkflowItem = (payload = {}) => {
+      const type = payload.type || 'message';
+      const nodeName = payload.nodeName || '';
+      const data = payload.data || {};
+      const canShowDetail = (type === 'node_finished' && nodeName !== 'summary') || type === 'node_failed' || type === 'error';
+      state.eventIndex += 1;
+      return {
+        id: `${Date.now()}-${state.eventIndex}`,
+        type,
+        nodeName,
+        title: buildTitle(type, nodeName),
+        status: statusByEvent(type),
+        summary: summarizePayload(type, nodeName, data),
+        detail: canShowDetail ? formatDetail(data) : '',
+        time: formatTime(payload.timestamp)
+      };
+    };
+
+    const findRunningNodeIndex = (nodeName) => {
+      for (let index = state.workflowEvents.length - 1; index >= 0; index -= 1) {
+        const item = state.workflowEvents[index];
+        if (item.nodeName === nodeName && item.status === 'running') return index;
+      }
+      return -1;
+    };
+
+    const updateControls = () => {
+      const hasAnyMessage = state.messages.length > 0 || state.workflowEvents.length > 0;
+      const hasInput = refs.agentInput.value.trim().length > 0;
+      refs.clearBtn.disabled = state.isLoading || !hasAnyMessage;
+      refs.agentInput.disabled = state.isLoading;
+      refs.sendBtn.disabled = state.isLoading || !hasInput;
+      refs.sendBtn.classList.toggle('hidden', state.isLoading);
+      refs.stopBtn.classList.toggle('hidden', !state.isLoading);
+      refs.typingIndicator.classList.toggle('visible', state.isLoading);
+      refs.errorBanner.classList.toggle('visible', Boolean(state.errorMessage));
+      refs.errorText.textContent = state.errorMessage;
+      refs.runningText.textContent = runningText();
+      refs.questionTags.querySelectorAll('button').forEach((button) => {
+        button.disabled = state.isLoading;
+      });
+    };
+
+    const runningText = () => {
+      const running = [...state.workflowEvents].reverse().find((item) => item.status === 'running');
+      return running ? `${running.title}...` : 'Agent is processing';
+    };
+
+    const scheduleScroll = () => {
+      if (state.scrollTimer) return;
+      state.scrollTimer = window.setTimeout(() => {
+        state.scrollTimer = null;
+        refs.messages.scrollTop = refs.messages.scrollHeight;
+      }, 30);
+    };
+
+    const renderThinkingEvents = (message) => {
+      if (!message.thinkingEvents || message.thinkingEvents.length === 0) return '';
+      const collapsed = message.thinkingCollapsed ? ' collapsed' : '';
+      const items = message.thinkingEvents.map((item) => `
+        <div class="thinking-item ${escapeHtml(item.status)}">
+          <span class="thinking-dot"></span>
+          <div class="thinking-body">
+            <div class="thinking-row">
+              <span>${escapeHtml(item.title)}</span>
+              <small>${escapeHtml(item.time)}</small>
+            </div>
+            ${item.summary ? `<p>${escapeHtml(item.summary)}</p>` : ''}
+            ${item.detail ? `<details class="thinking-detail"><summary>View result</summary><pre>${escapeHtml(item.detail)}</pre></details>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="thinking-panel${collapsed}">
+          <button type="button" class="thinking-toggle" data-action="toggle-thinking" data-message-id="${message.id}">
+            <span class="thinking-icon" aria-hidden="true">◈</span>
+            <span data-thinking-status>${escapeHtml(thinkingStatusText(message))}</span>
+            <span class="thinking-arrow" aria-hidden="true">⌄</span>
+          </button>
+          <div class="thinking-list">${items}</div>
+        </div>
+      `;
+    };
+
+    const renderMessage = (message) => {
+      const classNames = ['message', message.type];
+      if (message.pending) classNames.push('pending');
+      if (message.isError) classNames.push('error');
+      const avatar = message.type === 'user' ? 'U' : '<span class="assistant-mark">AI</span>';
+      return `
+        <article class="${classNames.join(' ')}" data-message-id="${message.id}">
+          <div class="message-avatar">${avatar}</div>
+          <div class="message-content">
+            ${message.type === 'bot' ? renderThinkingEvents(message) : ''}
+            ${message.text || message.pending ? `<div class="message-text">${renderRichMessage(message.text)}</div>` : ''}
+            <div class="message-time">${escapeHtml(message.time)}</div>
+          </div>
+        </article>
+      `;
+    };
+
+    const renderMessages = () => {
+      const messageHtml = state.messages.map(renderMessage).join('');
+      refs.messages.innerHTML = `${state.welcomeMessageHtml || ''}${messageHtml}`;
+      if (!state.welcomeMessageHtml) {
+        state.welcomeMessageHtml = refs.welcomeMessage.outerHTML;
+        refs.messages.innerHTML = `${state.welcomeMessageHtml}${messageHtml}`;
+      }
+      refs.messages.querySelector('#welcomeMessage')?.classList.toggle('hidden', state.messages.length > 0);
+      updateControls();
+      scheduleScroll();
+    };
+
+    const findMessageArticle = (message) => {
+      if (!message?.id) return null;
+      return refs.messages.querySelector(`article[data-message-id="${message.id}"]`);
+    };
+
+    const syncMessageDom = (message) => {
+      const article = findMessageArticle(message);
+      if (!article) return false;
+
+      article.classList.toggle('pending', Boolean(message.pending));
+      article.classList.toggle('error', Boolean(message.isError));
+
+      const statusText = article.querySelector('[data-thinking-status]');
+      if (statusText) statusText.textContent = thinkingStatusText(message);
+
+      const content = article.querySelector('.message-content');
+      let textElement = article.querySelector('.message-text');
+      if (message.text || message.pending) {
+        if (!textElement && content) {
+          textElement = document.createElement('div');
+          textElement.className = 'message-text';
+          content.insertBefore(textElement, article.querySelector('.message-time'));
+        }
+        if (textElement) textElement.innerHTML = renderRichMessage(message.text);
+      } else if (textElement) {
+        textElement.remove();
+      }
+
+      const timeElement = article.querySelector('.message-time');
+      if (timeElement) timeElement.textContent = message.time;
+      updateControls();
+      scheduleScroll();
+      return true;
+    };
+
+    const scheduleMessageDomSync = (message) => {
+      if (!message) return;
+      if (state.streamRenderFrame) return;
+      state.streamRenderFrame = window.requestAnimationFrame(() => {
+        state.streamRenderFrame = null;
+        if (!syncMessageDom(message)) renderMessages();
+      });
+    };
+
+    const cancelMessageDomSync = () => {
+      if (!state.streamRenderFrame) return;
+      window.cancelAnimationFrame(state.streamRenderFrame);
+      state.streamRenderFrame = null;
+    };
+
+    const setError = (message = '') => {
+      state.errorMessage = message;
+      updateControls();
+    };
+
+    const pushWorkflowEvent = (payload) => {
+      if (!payload) return;
+      const item = createWorkflowItem(payload);
+      if ((payload.type === 'node_finished' || payload.type === 'node_failed') && payload.nodeName) {
+        const runningIndex = findRunningNodeIndex(payload.nodeName);
+        if (runningIndex !== -1) {
+          state.workflowEvents.splice(runningIndex, 1, {
+            ...state.workflowEvents[runningIndex],
+            ...item
+          });
+          renderMessages();
+          return;
+        }
+      }
+      state.workflowEvents.push(item);
+      renderMessages();
+    };
+
+    const markThinkingDone = () => {
+      if (!state.activeAssistant) return;
+      state.activeAssistant.thinkingDone = true;
+      state.activeAssistant.thinkingFinishedAt = Date.now();
+    };
+
+    const appendAssistantDelta = (delta = '') => {
+      if (!delta || !state.activeAssistant) return;
+      if (state.activeAssistant.pending) {
+        state.activeAssistant.text = '';
+        state.activeAssistant.pending = false;
+      }
+      state.activeAssistant.text += delta;
+      state.activeAssistant.time = formatTime();
+      scheduleMessageDomSync(state.activeAssistant);
+    };
+
+    const finalizeAssistant = (finalAnswer = '') => {
+      if (!state.activeAssistant) return;
+      if (finalAnswer && (!state.activeAssistant.text || state.activeAssistant.pending)) {
+        state.activeAssistant.text = finalAnswer;
+      }
+      state.activeAssistant.pending = false;
+      state.activeAssistant.time = formatTime();
+      if (!syncMessageDom(state.activeAssistant)) renderMessages();
+    };
+
+    const handleWorkflowEvent = (eventName, payload = {}) => {
+      const eventPayload = payload.type ? payload : { ...payload, type: eventName };
+      const type = eventPayload.type || eventName;
+      const data = eventPayload.data || {};
+
+      if ((type === 'workflow_started' || type === 'chat_started') && state.activeAssistant) {
+        const startedAt = eventPayload.timestamp ? new Date(eventPayload.timestamp).getTime() : Date.now();
+        state.activeAssistant.thinkingStartedAt = Number.isNaN(startedAt) ? Date.now() : startedAt;
+      }
+
+      if (type === 'answer_delta') {
+        if (!state.activeAssistant?.thinkingDone) markThinkingDone();
+        appendAssistantDelta(data.delta || data.text || '');
+        return;
+      }
+
+      if (type === 'answer_done') {
+        markThinkingDone();
+        finalizeAssistant(data.finalAnswer || '');
+      }
+
+      if (type === 'workflow_done') {
+        state.finalWorkflowResult = data;
+        markThinkingDone();
+        finalizeAssistant(data.finalAnswer || '');
+      }
+
+      if (type === 'chat_done') {
+        state.finalWorkflowResult = data;
+        markThinkingDone();
+        finalizeAssistant(data.finalAnswer || '');
+      }
+
+      if (type === 'error') {
+        markThinkingDone();
+        setError(data.message || 'Agent streaming request failed');
+      }
+
+      pushWorkflowEvent(eventPayload);
+    };
+
+    const resetWorkflowState = () => {
+      state.workflowEvents = [];
+      state.finalWorkflowResult = null;
+      state.eventIndex = 0;
+    };
+
+    const parseSsePayload = (raw = '') => {
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw);
+      } catch (error) {
+        return { raw };
+      }
+    };
+
+    const dispatchSseBlock = (block) => {
+      if (!block.trim()) return;
+      let eventName = 'message';
+      const dataLines = [];
+      block.split(/\r?\n/).forEach((line) => {
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).trim() || 'message';
+        } else if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5).trimStart());
+        }
+      });
+      const payload = parseSsePayload(dataLines.join('\n'));
+      handleWorkflowEvent(eventName, payload);
+      if ((payload.type || eventName) === 'error') {
+        const message = payload.message || payload.data?.message || 'Agent streaming request failed';
+        const error = new Error(message);
+        error.streamEvent = true;
+        throw error;
+      }
+    };
+
+    const readSseStream = async (response) => {
+      if (!response.body?.getReader) {
+        const error = new Error('This browser does not support streaming responses.');
+        error.code = 'STREAM_UNSUPPORTED';
+        throw error;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || '';
+        blocks.forEach(dispatchSseBlock);
+      }
+
+      buffer += decoder.decode();
+      if (buffer.trim()) dispatchSseBlock(buffer);
+    };
+
+    const streamAgentChat = async (query) => {
+      const requestId = `qwen-notool-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        signal: state.abortController.signal,
+        headers: {
+          Accept: 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json;charset=UTF-8',
+          'X-Request-Id': requestId,
+          'X-User-Id': DEMO_USER_ID,
+          'X-User-Name': DEMO_USERNAME,
+          'X-User-Account': DEMO_ACCOUNT
+        },
+        body: JSON.stringify({
+          sessionId: DEMO_SESSION_ID,
+          query
+        })
+      });
+
+      if (!response.ok) {
+        const error = new Error(`Agent streaming request failed: HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      await readSseStream(response);
+    };
+
+    const sendMessage = async () => {
+      const text = refs.agentInput.value.trim();
+      if (!text || state.isLoading) return;
+
+      setError('');
+      resetWorkflowState();
+      state.manualStopRequested = false;
+      const currentTime = formatTime();
+
+      state.messages.push({
+        id: `user-${Date.now()}`,
+        type: 'user',
+        text,
+        time: currentTime
+      });
+
+      const assistant = {
+        id: `bot-${Date.now()}`,
+        type: 'bot',
+        text: DEFAULT_PENDING_TEXT,
+        time: currentTime,
+        pending: true,
+        thinkingEvents: state.workflowEvents,
+        thinkingCollapsed: false,
+        thinkingDone: false,
+        thinkingStartedAt: Date.now(),
+        thinkingFinishedAt: null
+      };
+      state.messages.push(assistant);
+      state.activeAssistant = assistant;
+      refs.agentInput.value = '';
+      state.abortController = new AbortController();
+      state.isLoading = true;
+      renderMessages();
+
+      try {
+        await streamAgentChat(text);
+        if (state.activeAssistant?.pending) {
+          state.activeAssistant.text = state.finalWorkflowResult?.finalAnswer || 'No final answer was returned for this workflow.';
+          state.activeAssistant.pending = false;
+          renderMessages();
+        }
+      } catch (error) {
+        const aborted = state.manualStopRequested || error?.name === 'AbortError';
+        if (aborted) {
+          markThinkingDone();
+          if (state.activeAssistant?.pending) {
+            state.activeAssistant.text = 'This answer was stopped.';
+            state.activeAssistant.pending = false;
+          }
+          pushWorkflowEvent({
+            type: 'error',
+            data: { message: 'The user stopped this workflow' },
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          markThinkingDone();
+          const message = error?.message || 'Agent streaming request failed';
+          setError(message);
+          if (state.activeAssistant) {
+            state.activeAssistant.text = message;
+            state.activeAssistant.pending = false;
+            state.activeAssistant.isError = true;
+          }
+          renderMessages();
+        }
+      } finally {
+        state.isLoading = false;
+        state.abortController = null;
+        state.activeAssistant = null;
+        updateControls();
+        scheduleScroll();
+      }
+    };
+
+    const stopStreaming = () => {
+      state.manualStopRequested = true;
+      state.abortController?.abort();
+    };
+
+    const clearChat = () => {
+      cancelMessageDomSync();
+      state.messages = [];
+      refs.agentInput.value = '';
+      setError('');
+      resetWorkflowState();
+      renderMessages();
+      refs.agentInput.focus();
+    };
+
+    const useQuickQuestion = (question) => {
+      refs.agentInput.value = question;
+      refs.agentInput.focus();
+      updateControls();
+    };
+
+    const formatInline = (text = '') =>
+      escapeHtml(text)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`]+?)`/g, '<code>$1</code>');
+
+    const splitTableRow = (line = '') =>
+      line
+        .trim()
+        .replace(/^\|/, '')
+        .replace(/\|$/, '')
+        .split('|')
+        .map((cell) => cell.trim());
+
+    const isTableSeparator = (line = '') =>
+      /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+
+    const headingMatch = (line = '') => line.match(/^(#{1,4})\s+(.+)$/);
+    const isHorizontalRule = (line = '') => /^\s*-{3,}\s*$/.test(line);
+    const unorderedListMatch = (line = '') => line.match(/^\s*[-*]\s+(.+)$/);
+    const orderedListMatch = (line = '') => line.match(/^\s*\d+\.\s+(.+)$/);
+
+    const renderTable = (lines, start) => {
+      const headers = splitTableRow(lines[start]);
+      const rows = [];
+      let index = start + 2;
+      while (index < lines.length && lines[index].includes('|') && lines[index].trim()) {
+        rows.push(splitTableRow(lines[index]));
+        index += 1;
+      }
+
+      const headerHtml = headers.map((cell) => `<th>${formatInline(cell)}</th>`).join('');
+      const bodyHtml = rows.map((row) => {
+        const cells = headers.map((_, cellIndex) => `<td>${formatInline(row[cellIndex] || '')}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      return {
+        html: `<div class="markdown-table-wrap"><table class="markdown-table"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`,
+        nextIndex: index
+      };
+    };
+
+    const renderList = (lines, start, ordered = false) => {
+      const tag = ordered ? 'ol' : 'ul';
+      const items = [];
+      let index = start;
+      while (index < lines.length) {
+        const match = ordered ? orderedListMatch(lines[index]) : unorderedListMatch(lines[index]);
+        if (!match) break;
+        items.push(`<li>${formatInline(match[1])}</li>`);
+        index += 1;
+      }
+      return {
+        html: `<${tag} class="markdown-list">${items.join('')}</${tag}>`,
+        nextIndex: index
+      };
+    };
+
+    function renderRichMessage(raw = '') {
+      if (!raw) return '';
+      const lines = raw.replace(/\r\n/g, '\n').split('\n');
+      const blocks = [];
+      let textLines = [];
+
+      const flushText = () => {
+        if (!textLines.length) return;
+        blocks.push(textLines.map(formatInline).join('<br>'));
+        textLines = [];
+      };
+
+      for (let index = 0; index < lines.length; index += 1) {
+        if (!lines[index].trim()) {
+          flushText();
+          continue;
+        }
+
+        if (isHorizontalRule(lines[index])) {
+          flushText();
+          blocks.push('<hr class="markdown-hr">');
+          continue;
+        }
+
+        const heading = headingMatch(lines[index]);
+        if (heading) {
+          flushText();
+          const level = Math.min(4, heading[1].length + 2);
+          blocks.push(`<h${level} class="markdown-heading">${formatInline(heading[2])}</h${level}>`);
+          continue;
+        }
+
+        if (unorderedListMatch(lines[index])) {
+          flushText();
+          const list = renderList(lines, index);
+          blocks.push(list.html);
+          index = list.nextIndex - 1;
+          continue;
+        }
+
+        if (orderedListMatch(lines[index])) {
+          flushText();
+          const list = renderList(lines, index, true);
+          blocks.push(list.html);
+          index = list.nextIndex - 1;
+          continue;
+        }
+
+        if (index + 1 < lines.length && lines[index].includes('|') && isTableSeparator(lines[index + 1])) {
+          flushText();
+          const table = renderTable(lines, index);
+          blocks.push(table.html);
+          index = table.nextIndex - 1;
+          continue;
+        }
+
+        textLines.push(lines[index]);
+      }
+
+      flushText();
+      return blocks.join('<br>');
+    }
+
+    const initQuickQuestions = () => {
+      refs.questionTags.innerHTML = quickQuestions.map((question) =>
+        `<button class="question-tag" type="button" data-question="${escapeHtml(question)}">${escapeHtml(question)}</button>`
+      ).join('');
+    };
+
+    refs.agentInput.addEventListener('input', updateControls);
+    refs.agentInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+    refs.sendBtn.addEventListener('click', sendMessage);
+    refs.stopBtn.addEventListener('click', stopStreaming);
+    refs.clearBtn.addEventListener('click', clearChat);
+    refs.questionTags.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-question]');
+      if (!button || state.isLoading) return;
+      useQuickQuestion(button.dataset.question);
+    });
+    refs.messages.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action="toggle-thinking"]');
+      if (!button) return;
+      const message = state.messages.find((item) => item.id === button.dataset.messageId);
+      if (!message) return;
+      message.thinkingCollapsed = !message.thinkingCollapsed;
+      renderMessages();
+    });
+    window.addEventListener('beforeunload', () => {
+      state.abortController?.abort();
+      if (state.scrollTimer) window.clearTimeout(state.scrollTimer);
+      cancelMessageDomSync();
+    });
+
+    state.welcomeMessageHtml = refs.welcomeMessage.outerHTML;
+    initQuickQuestions();
+    renderMessages();
+  </script>
+</body>
+</html>

@@ -5,6 +5,8 @@ import com.tcmseek.tcmseekagentservice.ai.tools.ToolManager;
 import com.tcmseek.tcmseekagentservice.graph.node.AgentWorkflowNodes;
 import com.tcmseek.tcmseekagentservice.graph.node.WorkflowNodeNames;
 import com.tcmseek.tcmseekagentservice.graph.state.WorkflowContext;
+import com.tcmseek.tcmseekagentservice.memory.AgentConversationContext;
+import com.tcmseek.tcmseekagentservice.memory.AgentSessionManager;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import org.bsc.langgraph4j.CompiledGraph;
@@ -54,6 +56,11 @@ public class AgentWorkflowStreamService {
     private final ToolManager toolManager;
 
     /**
+     * 会话记忆管理器，负责流式回答完成后的上下文持久化。
+     */
+    private final AgentSessionManager sessionManager;
+
+    /**
      * 构造流式工作流服务。
      *
      * @param openAiChatModel 同步 ChatModel
@@ -62,10 +69,12 @@ public class AgentWorkflowStreamService {
      */
     public AgentWorkflowStreamService(OpenAiChatModel openAiChatModel,
                                       @Qualifier("streamingChatModel") StreamingChatModel streamingChatModel,
-                                      ToolManager toolManager) {
+                                      ToolManager toolManager,
+                                      AgentSessionManager sessionManager) {
         this.openAiChatModel = openAiChatModel;
         this.streamingChatModel = streamingChatModel;
         this.toolManager = toolManager;
+        this.sessionManager = sessionManager;
     }
 
     /**
@@ -76,15 +85,36 @@ public class AgentWorkflowStreamService {
      * @return SSE 连接对象
      */
     public SseEmitter stream(String query, Integer maxReplanTimes) {
+        return stream(query, maxReplanTimes, null, AgentRequestContext.empty());
+    }
+
+    public SseEmitter stream(String query,
+                             Integer maxReplanTimes,
+                             String sessionId,
+                             AgentRequestContext requestContext) {
         if (!StringUtils.hasText(query)) {
             throw new IllegalArgumentException("query 不能为空");
         }
 
+        AgentRequestContext safeContext = requestContext == null ? AgentRequestContext.empty() : requestContext;
+        long startedAt = System.currentTimeMillis();
+        String trimmedQuery = query.trim();
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        WorkflowContext initialContext = WorkflowContext.start(query.trim(), maxReplanTimes);
+        AgentConversationContext conversationContext =
+                sessionManager.buildContext(sessionId, trimmedQuery, safeContext);
+        WorkflowContext initialContext = WorkflowContext.start(
+                trimmedQuery,
+                conversationContext.getEnhancedPrompt(),
+                maxReplanTimes);
         WorkflowEventPublisher publisher = new WorkflowEventPublisher(emitter, initialContext.getTraceId());
 
-        CompletableFuture.runAsync(() -> execute(initialContext, publisher));
+        CompletableFuture.runAsync(() -> execute(
+                initialContext,
+                publisher,
+                sessionId,
+                trimmedQuery,
+                safeContext,
+                startedAt));
 
         return emitter;
     }
@@ -92,7 +122,12 @@ public class AgentWorkflowStreamService {
     /**
      * 后台执行图流程，并负责 SSE 生命周期。
      */
-    private void execute(WorkflowContext initialContext, WorkflowEventPublisher publisher) {
+    private void execute(WorkflowContext initialContext,
+                         WorkflowEventPublisher publisher,
+                         String sessionId,
+                         String query,
+                         AgentRequestContext requestContext,
+                         long startedAt) {
         try {
             publisher.workflowStarted(initialContext);
 
@@ -115,6 +150,12 @@ public class AgentWorkflowStreamService {
             WorkflowContext finalContext = finalState
                     .map(WorkflowContext::requireContext)
                     .orElse(initialContext);
+            sessionManager.appendExchange(
+                    sessionId,
+                    query,
+                    finalContext.getFinalAnswer(),
+                    requestContext,
+                    System.currentTimeMillis() - startedAt);
             publisher.workflowDone(toResult(finalContext));
             publisher.complete();
         } catch (Exception e) {

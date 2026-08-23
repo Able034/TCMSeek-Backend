@@ -1,9 +1,11 @@
 package com.tcmseek.tcmseekagentservice.controller;
 
+import com.tcmseek.tcmseekagentservice.service.AgentRequestContext;
 import com.tcmseek.tcmseekagentservice.service.AgentWorkflowStreamService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -15,8 +17,16 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * 节点开始/完成事件按事件流输出，最终回答按 answer_delta token 输出。</p>
  */
 @RestController
-@RequestMapping("/api/agent")
+@RequestMapping("/agent")
 public class AgentWorkflowStreamController {
+
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
+
+    private static final String USER_ID_HEADER = "X-User-Id";
+
+    private static final String USERNAME_HEADER = "X-User-Name";
+
+    private static final String ACCOUNT_HEADER = "X-User-Account";
 
     /**
      * 流式工作流服务。
@@ -37,11 +47,16 @@ public class AgentWorkflowStreamController {
      * @return SSE 事件流
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatStream(@RequestBody AgentStreamChatRequest request) {
+    public SseEmitter chatStream(@RequestBody AgentStreamChatRequest request,
+                                 @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
+                                 @RequestHeader(value = USER_ID_HEADER, required = false) String userId,
+                                 @RequestHeader(value = USERNAME_HEADER, required = false) String username,
+                                 @RequestHeader(value = ACCOUNT_HEADER, required = false) String account) {
+        AgentRequestContext context = new AgentRequestContext(requestId, userId, username, account);
         if(request.maxReplanTimes()==null || request.maxReplanTimes() == 0 ){
-            return agentWorkflowStreamService.stream(request.query(),2);
+            return agentWorkflowStreamService.stream(request.query(),2, request.sessionId(), context);
         }
-        return agentWorkflowStreamService.stream(request.query(), request.maxReplanTimes());
+        return agentWorkflowStreamService.stream(request.query(), request.maxReplanTimes(), request.sessionId(), context);
     }
 
     /**
@@ -49,7 +64,8 @@ public class AgentWorkflowStreamController {
      *
      * @param query 用户原始问题
      * @param maxReplanTimes 最大重规划次数，可为空
+     * @param sessionId 会话 ID，可为空
      */
-    public record AgentStreamChatRequest(String query, Integer maxReplanTimes) {
+    public record AgentStreamChatRequest(String query, Integer maxReplanTimes, String sessionId) {
     }
 }

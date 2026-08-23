@@ -171,7 +171,7 @@ public class AgentWorkflowNodes {
         context.setCurrentStep(INTENT);
         eventPublisher.nodeStarted(context, INTENT);
         try {
-            ClassifyCodeResult result = aiClassifyService.classifyQuery(memoryId(context, INTENT), context.getOriginalPrompt());
+            ClassifyCodeResult result = aiClassifyService.classifyQuery(memoryId(context, INTENT), queryForAgents(context));
             context.setIntentResult(result);
             context.recordCall(INTENT, "AiClassifyService", "classifyQuery",
                     Map.of("query", context.getOriginalPrompt()), result, elapsed(start));
@@ -197,7 +197,7 @@ public class AgentWorkflowNodes {
         context.setCurrentStep(ENTITY);
         eventPublisher.nodeStarted(context, ENTITY);
         try {
-            NormalizeEntityResult result = aiNormalizeEntityService.normalizeEntity(memoryId(context, ENTITY), context.getOriginalPrompt());
+            NormalizeEntityResult result = aiNormalizeEntityService.normalizeEntity(memoryId(context, ENTITY), queryForAgents(context));
             context.setEntityResult(result);
             context.recordCall(ENTITY, "AiNormalizeEntityService", "normalizeEntity",
                     Map.of("query", context.getOriginalPrompt()), result, elapsed(start));
@@ -227,7 +227,7 @@ public class AgentWorkflowNodes {
         try {
             PlanResult result = aiPlannerService.plan(
                     memoryId(context, PLANNER),
-                    context.getOriginalPrompt(),
+                    queryForAgents(context),
                     json(context.getIntentResult()),
                     json(context.getEntityResult()),
                     context.getNeo4jResult(),
@@ -262,7 +262,7 @@ public class AgentWorkflowNodes {
             String result = aiSearchService.searchByNeo4j(
                     memoryId(context, NEO4J),
                     context.getEntityResult() == null ? List.of() : context.getEntityResult().getNeo4jEntities(),
-                    context.getOriginalPrompt()
+                    queryForAgents(context)
             );
             context.setNeo4jResult(result);
             context.recordCall(NEO4J, "AiSearchService", "searchByNeo4j",
@@ -294,7 +294,7 @@ public class AgentWorkflowNodes {
         try {
             String result = aiMysqlSearchService.searchMysqlDetails(
                     memoryId(context, MYSQL),
-                    context.getOriginalPrompt(),
+                    queryForAgents(context),
                     json(context.getIntentResult()),
                     json(context.getEntityResult()),
                     context.getNeo4jResult()
@@ -332,7 +332,7 @@ public class AgentWorkflowNodes {
         try {
             AnswerJudgeResult result = aiAnswerJudgeService.judge(
                     memoryId(context, JUDGE),
-                    context.getOriginalPrompt(),
+                    queryForAgents(context),
                     json(context.getIntentResult()),
                     json(context.getEntityResult()),
                     json(context.getPlanResult()),
@@ -370,7 +370,7 @@ public class AgentWorkflowNodes {
         try {
             PlanResult result = aiPlannerService.plan(
                     memoryId(context, REPLAN + "-" + context.getReplanTimes()),
-                    context.getOriginalPrompt(),
+                    queryForAgents(context),
                     json(context.getIntentResult()),
                     json(context.getEntityResult()),
                     context.getNeo4jResult(),
@@ -448,7 +448,7 @@ public class AgentWorkflowNodes {
                     + json(context.getAnswerJudgeResult());
             String result = aiSummaryService.summarize(
                     memoryId(context, SUMMARY),
-                    context.getOriginalPrompt(),
+                    queryForAgents(context),
                     json(context.getIntentResult()),
                     json(context.getEntityResult()),
                     context.getNeo4jResult(),
@@ -573,13 +573,19 @@ public class AgentWorkflowNodes {
 
                 请用中文生成最终回答。
                 """.formatted(
-                context.getOriginalPrompt(),
+                queryForAgents(context),
                 json(context.getIntentResult()),
                 json(context.getEntityResult()),
                 context.getNeo4jResult(),
                 context.getMysqlResult(),
                 json(context.getAnswerJudgeResult())
         );
+    }
+
+    private String queryForAgents(WorkflowContext context) {
+        return StringUtils.hasText(context.getEnhancedPrompt())
+                ? context.getEnhancedPrompt()
+                : context.getOriginalPrompt();
     }
 
     /**

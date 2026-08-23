@@ -9,7 +9,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties({
-        Neo4jProperties.class
+        Neo4jProperties.class,
+        AgentConversationStorageProperties.class,
+        AgentCacheProperties.class
 })
 public class ServiceConfig {
 

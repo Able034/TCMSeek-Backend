@@ -6,29 +6,28 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 
 @Configuration
-@EnableConfigurationProperties(MysqlProperties.class)
-public class MysqlConfig {
+@EnableConfigurationProperties(AgentPostgresProperties.class)
+public class AgentPostgresConfig {
 
-    @Primary
     @Bean(destroyMethod = "close")
-    public DataSource mysqlDataSource(MysqlProperties mysqlProperties) {
+    public DataSource agentPostgresDataSource(AgentPostgresProperties properties) {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(mysqlProperties.getUrl());
-        config.setUsername(mysqlProperties.getUsername());
-        config.setPassword(mysqlProperties.getPassword());
+        config.setJdbcUrl(properties.getUrl());
+        config.setUsername(properties.getUsername());
+        config.setPassword(properties.getPassword());
 
-        if (StringUtils.hasText(mysqlProperties.getDriverClassName())) {
-            config.setDriverClassName(mysqlProperties.getDriverClassName());
+        if (StringUtils.hasText(properties.getDriverClassName())) {
+            config.setDriverClassName(properties.getDriverClassName());
         }
 
-        MysqlProperties.Hikari hikari = mysqlProperties.getHikari();
+        AgentPostgresProperties.Hikari hikari = properties.getHikari();
         if (hikari.getMaximumPoolSize() != null) {
             config.setMaximumPoolSize(hikari.getMaximumPoolSize());
         }
@@ -46,7 +45,14 @@ public class MysqlConfig {
     }
 
     @Bean
-    public JdbcTemplate mysqlJdbcTemplate(@Qualifier("mysqlDataSource") DataSource mysqlDataSource) {
-        return new JdbcTemplate(mysqlDataSource);
+    public JdbcTemplate agentConversationJdbcTemplate(
+            @Qualifier("agentPostgresDataSource") DataSource agentPostgresDataSource) {
+        return new JdbcTemplate(agentPostgresDataSource);
+    }
+
+    @Bean
+    public DataSourceTransactionManager agentPostgresTransactionManager(
+            @Qualifier("agentPostgresDataSource") DataSource agentPostgresDataSource) {
+        return new DataSourceTransactionManager(agentPostgresDataSource);
     }
 }

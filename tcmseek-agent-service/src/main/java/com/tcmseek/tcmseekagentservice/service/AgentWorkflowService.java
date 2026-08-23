@@ -5,6 +5,8 @@ import com.tcmseek.tcmseekagentservice.ai.tools.ToolManager;
 import com.tcmseek.tcmseekagentservice.graph.node.AgentWorkflowNodes;
 import com.tcmseek.tcmseekagentservice.graph.node.WorkflowNodeNames;
 import com.tcmseek.tcmseekagentservice.graph.state.WorkflowContext;
+import com.tcmseek.tcmseekagentservice.memory.AgentConversationContext;
+import com.tcmseek.tcmseekagentservice.memory.AgentSessionManager;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.RunnableConfig;
@@ -44,14 +46,22 @@ public class AgentWorkflowService {
     private final CompiledGraph<MessagesState<String>> graph;
 
     /**
+     * 会话记忆管理器，负责跨请求上下文恢复和最终问答落库。
+     */
+    private final AgentSessionManager sessionManager;
+
+    /**
      * 构造工作流服务。
      *
      * @param openAiChatModel LangChain4j 使用的同步 ChatModel
      * @param toolManager 工具管理器，用于给子 Agent 注入受限工具
      */
-    public AgentWorkflowService(OpenAiChatModel openAiChatModel, ToolManager toolManager) {
+    public AgentWorkflowService(OpenAiChatModel openAiChatModel,
+                                ToolManager toolManager,
+                                AgentSessionManager sessionManager) {
         this.nodes = new AgentWorkflowNodes(openAiChatModel, toolManager);
         this.graph = buildGraph();
+        this.sessionManager = sessionManager;
     }
 
     /**
@@ -62,11 +72,26 @@ public class AgentWorkflowService {
      * @return 带最终答案、过程状态和调用记录的完整结果
      */
     public AgentWorkflowResult run(String query, Integer maxReplanTimes) {
+        return run(query, maxReplanTimes, null, AgentRequestContext.empty());
+    }
+
+    public AgentWorkflowResult run(String query,
+                                   Integer maxReplanTimes,
+                                   String sessionId,
+                                   AgentRequestContext requestContext) {
         if (!StringUtils.hasText(query)) {
             throw new IllegalArgumentException("query 不能为空");
         }
 
-        WorkflowContext initialContext = WorkflowContext.start(query.trim(), maxReplanTimes);
+        AgentRequestContext safeContext = requestContext == null ? AgentRequestContext.empty() : requestContext;
+        long startedAt = System.currentTimeMillis();
+        String trimmedQuery = query.trim();
+        AgentConversationContext conversationContext =
+                sessionManager.buildContext(sessionId, trimmedQuery, safeContext);
+        WorkflowContext initialContext = WorkflowContext.start(
+                trimmedQuery,
+                conversationContext.getEnhancedPrompt(),
+                maxReplanTimes);
         RunnableConfig config = RunnableConfig.builder()
                 .threadId(initialContext.getTraceId())
                 .build();
@@ -79,6 +104,13 @@ public class AgentWorkflowService {
         WorkflowContext finalContext = finalState
                 .map(WorkflowContext::requireContext)
                 .orElse(initialContext);
+
+        sessionManager.appendExchange(
+                sessionId,
+                trimmedQuery,
+                finalContext.getFinalAnswer(),
+                safeContext,
+                System.currentTimeMillis() - startedAt);
 
         return toResult(finalContext);
     }
