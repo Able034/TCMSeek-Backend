@@ -70,7 +70,7 @@ public class QwenNoToolChatService {
         String conversationId = null;
         try {
             AgentConversationContext conversationContext =
-                    sessionManager.buildContext(sessionId, query, requestContext);
+                    sessionManager.buildContext(sessionId, query, requestContext, false);
             conversationId = conversationContext.getConversationId();
             send(emitter, traceId, "chat_started", Map.of(
                     "query", query,
@@ -79,7 +79,14 @@ public class QwenNoToolChatService {
 
             String finalAnswer = callModel(emitter, traceId, buildPrompt(conversationContext.getEnhancedPrompt(), query));
             long latencyMs = System.currentTimeMillis() - startedAt;
-            sessionManager.appendExchange(sessionId, query, finalAnswer, requestContext, latencyMs);
+            sessionManager.appendExchange(
+                    sessionId,
+                    query,
+                    finalAnswer,
+                    requestContext,
+                    latencyMs,
+                    ShowModelConversationService.MODE,
+                    false);
 
             send(emitter, traceId, "chat_done", Map.of(
                     "conversationId", conversationId,
@@ -147,9 +154,10 @@ public class QwenNoToolChatService {
     private String buildPrompt(String enhancedPrompt, String query) {
         String context = StringUtils.hasText(enhancedPrompt) ? enhancedPrompt : "user: " + query;
         return """
-                You are the TCMSeek fine-tuned Qwen chat model.
+                You are TCMReason, a TCM-focused conversational model.
                 Answer the user directly in Chinese unless the user asks for another language.
                 Do not call tools, browse, query databases, or claim that you used external tools.
+                Do not identify yourself as Qwen, DeepSeek, or any underlying provider or model.
                 Use the following conversation context only to maintain memory and multi-turn continuity.
                 The last user message in the context is the current question.
 

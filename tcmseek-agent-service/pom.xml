@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.tcmseek</groupId>
     <artifactId>tcmseek-agent-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.2.1-SNAPSHOT</version>
     <name>tcmseek-agent-service</name>
     <description>tcmseek-agent-service</description>
 

@@ -50,6 +50,13 @@ public class AgentSessionManager {
     public AgentConversationContext buildContext(String sessionId,
                                                  String query,
                                                  AgentRequestContext requestContext) {
+        return buildContext(sessionId, query, requestContext, true);
+    }
+
+    public AgentConversationContext buildContext(String sessionId,
+                                                 String query,
+                                                 AgentRequestContext requestContext,
+                                                 boolean includeLongTermMemory) {
         String userId = requestContext == null ? null : requestContext.getUserId();
         String conversationId = conversationKey(sessionId, userId);
         String stateKey = localStateKey(userId, conversationId);
@@ -70,7 +77,11 @@ public class AgentSessionManager {
         }
 
         List<AgentMessage> context = mergeContext(storedMessages, incomingMessages);
-        List<AgentMessage> enriched = memoryService.enrichContext(userId, conversationId, trimToLimit(context));
+        List<AgentMessage> enriched = memoryService.enrichContext(
+                userId,
+                conversationId,
+                trimToLimit(context),
+                includeLongTermMemory);
         return new AgentConversationContext(conversationId, buildPrompt(enriched));
     }
 
@@ -79,6 +90,16 @@ public class AgentSessionManager {
                                String reply,
                                AgentRequestContext requestContext,
                                long latencyMs) {
+        appendExchange(sessionId, query, reply, requestContext, latencyMs, "academic", true);
+    }
+
+    public void appendExchange(String sessionId,
+                               String query,
+                               String reply,
+                               AgentRequestContext requestContext,
+                               long latencyMs,
+                               String mode,
+                               boolean includeLongTermMemory) {
         if (!StringUtils.hasText(query) || !StringUtils.hasText(reply)) {
             return;
         }
@@ -88,8 +109,8 @@ public class AgentSessionManager {
         String stateKey = localStateKey(userId, conversationId);
         updateLocalState(stateKey, query.trim(), reply);
         cacheContext(userId, conversationId, localMessages(stateKey));
-        persistExchange(conversationId, query.trim(), reply, requestContext, latencyMs);
-        memoryService.refreshAfterExchangeAsync(conversationId, userId);
+        persistExchange(conversationId, query.trim(), reply, requestContext, latencyMs, mode);
+        memoryService.refreshAfterExchangeAsync(conversationId, userId, includeLongTermMemory);
         cleanupIfNeeded();
     }
 
@@ -118,7 +139,8 @@ public class AgentSessionManager {
                                  String query,
                                  String reply,
                                  AgentRequestContext requestContext,
-                                 long latencyMs) {
+                                 long latencyMs,
+                                 String mode) {
         if (!storageProperties.isPersistenceEnabled()) {
             return;
         }
@@ -129,7 +151,8 @@ public class AgentSessionManager {
                     query,
                     reply,
                     requestContext == null ? null : requestContext.getRequestId(),
-                    latencyMs);
+                    latencyMs,
+                    mode);
         } catch (RuntimeException ex) {
             log.warn("persist agent conversation to postgres failed conversationId={} message={}",
                     conversationId, ex.getMessage(), ex);

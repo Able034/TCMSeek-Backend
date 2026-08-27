@@ -142,6 +142,27 @@
       box-shadow: var(--shadow);
     }
 
+    .chat-layout {
+      display: block;
+    }
+
+    .export-btn {
+      min-height: 38px;
+      border: none;
+      border-radius: 8px;
+      padding: 0 13px;
+      background: var(--green-soft);
+      color: var(--green);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .export-btn:hover:not(:disabled) {
+      background: var(--green-bright);
+      color: #fff;
+    }
+
     .messages {
       min-height: 430px;
       max-height: calc(100vh - 302px);
@@ -602,6 +623,7 @@
       .messages {
         max-height: none;
       }
+
     }
 
     @media (max-width: 640px) {
@@ -641,7 +663,7 @@
         <h1><span class="header-icon" aria-hidden="true">◇</span>TCMReason</h1>
       </div>
       <div class="agent-controls">
-        <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear" disabled>↻</button>
+        <button id="exportBtn" class="export-btn" type="button" disabled>导出 CSV</button>
       </div>
     </header>
 
@@ -650,11 +672,12 @@
       <span id="errorText"></span>
     </div>
 
-    <section class="chat-panel" aria-label="TCMReason chat">
+    <div class="chat-layout">
+      <section class="chat-panel" aria-label="TCMReason chat">
       <div id="messages" class="messages" aria-live="polite">
         <div id="welcomeMessage" class="welcome-message">
           <h2><span class="section-icon" aria-hidden="true">⌬</span>TCMReason</h2>
-          <p>Ask the fine-tuned Qwen model and keep the conversation context across turns.</p>
+          <p>Explore multi-turn conversations with the TCMReason model.</p>
         </div>
       </div>
 
@@ -664,7 +687,7 @@
       </div>
 
       <div class="input-area">
-        <textarea id="agentInput" class="agent-input" rows="2" placeholder="Example: shared target information for Ginseng and Tangerine Peel"></textarea>
+        <textarea id="agentInput" class="agent-input" rows="2" placeholder="支持中/英文&#10;Chinese / English supported"></textarea>
         <button id="sendBtn" class="send-btn" type="button" disabled>
           <span aria-hidden="true">➤</span>
           <span>Send</span>
@@ -674,7 +697,8 @@
           <span>Stop</span>
         </button>
       </div>
-    </section>
+      </section>
+    </div>
 
     <section class="quick-questions" aria-label="Quick questions">
       <h2><span class="section-icon" aria-hidden="true">✦</span>Quick Questions</h2>
@@ -685,12 +709,8 @@
   <script>
     const DETAIL_LIMIT = 6000;
     const SUMMARY_LIMIT = 160;
-    const DEFAULT_PENDING_TEXT = 'Qwen is answering...';
-    const API_URL = '/agentqwen/chat/stream';
-    const DEMO_USER_ID = 'showmodel-default-user';
-    const DEMO_USERNAME = 'showmodel';
-    const DEMO_ACCOUNT = 'showmodel';
-    const DEMO_SESSION_ID = 'showmodel-default-session';
+    const DEFAULT_PENDING_TEXT = 'TCMReason is answering...';
+    const API_URL = '/showmodel/chat/stream';
 
     const quickQuestions = [
       'Shared target information for Ginseng and Tangerine Peel',
@@ -711,8 +731,8 @@
     };
 
     const eventTitleMap = {
-      chat_started: 'Qwen chat started',
-      chat_done: 'Qwen chat completed',
+      chat_started: 'Model chat started',
+      chat_done: 'Model chat completed',
       workflow_started: 'Workflow started',
       answer_done: 'Answer completed',
       workflow_done: 'Workflow completed',
@@ -730,11 +750,12 @@
       scrollTimer: null,
       streamRenderFrame: null,
       manualStopRequested: false,
-      eventIndex: 0
+      eventIndex: 0,
+      activeConversationId: ''
     };
 
     const refs = {
-      clearBtn: document.getElementById('clearBtn'),
+      exportBtn: document.getElementById('exportBtn'),
       errorBanner: document.getElementById('errorBanner'),
       errorText: document.getElementById('errorText'),
       messages: document.getElementById('messages'),
@@ -860,7 +881,7 @@
     const updateControls = () => {
       const hasAnyMessage = state.messages.length > 0 || state.workflowEvents.length > 0;
       const hasInput = refs.agentInput.value.trim().length > 0;
-      refs.clearBtn.disabled = state.isLoading || !hasAnyMessage;
+      refs.exportBtn.disabled = !state.messages.some((message) => !message.pending);
       refs.agentInput.disabled = state.isLoading;
       refs.sendBtn.disabled = state.isLoading || !hasInput;
       refs.sendBtn.classList.toggle('hidden', state.isLoading);
@@ -872,6 +893,11 @@
       refs.questionTags.querySelectorAll('button').forEach((button) => {
         button.disabled = state.isLoading;
       });
+    };
+
+    const startFreshConversation = () => {
+      state.activeConversationId = window.crypto?.randomUUID?.()
+        || `conversation-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     };
 
     const runningText = () => {
@@ -1147,7 +1173,7 @@
     };
 
     const streamAgentChat = async (query) => {
-      const requestId = `qwen-notool-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const requestId = `showmodel-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const response = await fetch(API_URL, {
         method: 'POST',
         signal: state.abortController.signal,
@@ -1155,13 +1181,10 @@
           Accept: 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Content-Type': 'application/json;charset=UTF-8',
-          'X-Request-Id': requestId,
-          'X-User-Id': DEMO_USER_ID,
-          'X-User-Name': DEMO_USERNAME,
-          'X-User-Account': DEMO_ACCOUNT
+          'X-Request-Id': requestId
         },
         body: JSON.stringify({
-          sessionId: DEMO_SESSION_ID,
+          sessionId: state.activeConversationId,
           query
         })
       });
@@ -1178,6 +1201,8 @@
     const sendMessage = async () => {
       const text = refs.agentInput.value.trim();
       if (!text || state.isLoading) return;
+
+      if (!state.activeConversationId) startFreshConversation();
 
       setError('');
       resetWorkflowState();
@@ -1255,14 +1280,28 @@
       state.abortController?.abort();
     };
 
-    const clearChat = () => {
-      cancelMessageDomSync();
-      state.messages = [];
-      refs.agentInput.value = '';
-      setError('');
-      resetWorkflowState();
-      renderMessages();
-      refs.agentInput.focus();
+    const exportCurrentConversation = () => {
+      const rows = [
+        ['role', 'content', 'time'],
+        ...state.messages
+          .filter((message) => !message.pending)
+          .map((message) => [
+            message.type === 'user' ? 'user' : 'assistant',
+            message.text || '',
+            message.time || ''
+          ])
+      ];
+      const escapeCsv = (value) => `"${String(value).replace(/"/g, '""')}"`;
+      const csv = `\uFEFF${rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `TCMReason-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
     };
 
     const useQuickQuestion = (question) => {
@@ -1407,7 +1446,7 @@
     });
     refs.sendBtn.addEventListener('click', sendMessage);
     refs.stopBtn.addEventListener('click', stopStreaming);
-    refs.clearBtn.addEventListener('click', clearChat);
+    refs.exportBtn.addEventListener('click', exportCurrentConversation);
     refs.questionTags.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-question]');
       if (!button || state.isLoading) return;
@@ -1430,6 +1469,7 @@
     state.welcomeMessageHtml = refs.welcomeMessage.outerHTML;
     initQuickQuestions();
     renderMessages();
+    startFreshConversation();
   </script>
 </body>
 </html>

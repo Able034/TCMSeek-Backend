@@ -59,6 +59,95 @@ public class AgentConversationRepository {
         return total == null ? 0 : total;
     }
 
+    public List<AgentConversationSummary> findActiveConversations(String userId, String mode, int limit) {
+        int safeLimit = Math.max(1, Math.min(50, limit));
+        return jdbcTemplate.query("""
+                        select id, title, message_count, last_message_at::text as last_message_at,
+                               updated_at::text as updated_at
+                        from ai_conversation
+                        where user_id = ?
+                          and mode = ?
+                          and status = 'active'
+                        order by coalesce(last_message_at, updated_at) desc, id desc
+                        limit ?
+                        """,
+                (rs, rowNum) -> new AgentConversationSummary(
+                        rs.getString("id"),
+                        rs.getString("title"),
+                        rs.getInt("message_count"),
+                        rs.getString("last_message_at"),
+                        rs.getString("updated_at")),
+                normalizeUserId(userId),
+                mode,
+                safeLimit);
+    }
+
+    public AgentConversationSummary findActiveConversation(String userId, String mode, String conversationId) {
+        if (!StringUtils.hasText(conversationId)) {
+            return null;
+        }
+        List<AgentConversationSummary> items = jdbcTemplate.query("""
+                        select id, title, message_count, last_message_at::text as last_message_at,
+                               updated_at::text as updated_at
+                        from ai_conversation
+                        where id = ?
+                          and user_id = ?
+                          and mode = ?
+                          and status = 'active'
+                        """,
+                (rs, rowNum) -> new AgentConversationSummary(
+                        rs.getString("id"),
+                        rs.getString("title"),
+                        rs.getInt("message_count"),
+                        rs.getString("last_message_at"),
+                        rs.getString("updated_at")),
+                conversationId,
+                normalizeUserId(userId),
+                mode);
+        return items.isEmpty() ? null : items.get(0);
+    }
+
+    public AgentConversationSummary createConversation(String userId, String mode, String title) {
+        return createConversation(compactUuid(), userId, mode, title);
+    }
+
+    public AgentConversationSummary createConversation(String id, String userId, String mode, String title) {
+        String owner = normalizeUserId(userId);
+        jdbcTemplate.update("""
+                        insert into ai_conversation (id, user_id, title, mode, status, message_count, last_message_at)
+                        values (?, ?, ?, ?, 'active', 0, now())
+                        on conflict (id) do nothing
+                        """,
+                id,
+                owner,
+                StringUtils.hasText(title) ? title.trim() : "新对话",
+                mode);
+        return findActiveConversation(owner, mode, id);
+    }
+
+    public List<AgentStoredMessage> findConversationMessages(String userId, String conversationId, int limit) {
+        int safeLimit = Math.max(1, Math.min(100, limit));
+        return jdbcTemplate.query("""
+                        select role, content, created_at::text as created_at
+                        from (
+                            select id, role, content, created_at
+                            from ai_message
+                            where user_id = ?
+                              and conversation_id = ?
+                            order by created_at desc, id desc
+                            limit ?
+                        ) recent
+                        order by created_at asc, id asc
+                        """,
+                (rs, rowNum) -> new AgentStoredMessage(
+                        rs.getString("role"),
+                        rs.getString("content"),
+                        rs.getString("created_at")),
+                normalizeUserId(userId),
+                conversationId,
+                safeLimit);
+    }
+
     public AgentConversationSummaryState findSummary(String userId, String conversationId) {
         if (!StringUtils.hasText(userId) || !StringUtils.hasText(conversationId)) {
             return null;
@@ -199,6 +288,17 @@ public class AgentConversationRepository {
                              String assistantContent,
                              String requestId,
                              long latencyMs) {
+        saveExchange(conversationId, userId, userContent, assistantContent, requestId, latencyMs, "academic");
+    }
+
+    @Transactional(transactionManager = "agentPostgresTransactionManager")
+    public void saveExchange(String conversationId,
+                             String userId,
+                             String userContent,
+                             String assistantContent,
+                             String requestId,
+                             long latencyMs,
+                             String mode) {
         if (!StringUtils.hasText(conversationId)
                 || !StringUtils.hasText(userContent)
                 || !StringUtils.hasText(assistantContent)) {
@@ -210,7 +310,7 @@ public class AgentConversationRepository {
         String userMessageId = compactUuid();
         String assistantMessageId = compactUuid();
 
-        if (!upsertConversation(conversationId, owner, title)) {
+        if (!upsertConversation(conversationId, owner, title, mode)) {
             return;
         }
         insertUserMessage(userMessageId, conversationId, owner, userContent, requestId);
@@ -218,10 +318,10 @@ public class AgentConversationRepository {
         touchConversation(conversationId, owner, title);
     }
 
-    private boolean upsertConversation(String conversationId, String userId, String title) {
+    private boolean upsertConversation(String conversationId, String userId, String title, String mode) {
         int rows = jdbcTemplate.update("""
                         insert into ai_conversation (id, user_id, title, mode, status, message_count, last_message_at)
-                        values (?, ?, ?, 'academic', 'active', 0, now())
+                        values (?, ?, ?, ?, 'active', 0, now())
                         on conflict (id) do update set
                             title = coalesce(ai_conversation.title, excluded.title),
                             last_message_at = now(),
@@ -231,7 +331,8 @@ public class AgentConversationRepository {
                         """,
                 conversationId,
                 userId,
-                title);
+                title,
+                mode);
         return rows > 0;
     }
 

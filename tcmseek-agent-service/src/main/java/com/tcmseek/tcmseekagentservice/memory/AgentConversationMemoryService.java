@@ -53,11 +53,18 @@ public class AgentConversationMemoryService {
     public List<AgentMessage> enrichContext(String userId,
                                             String conversationId,
                                             List<AgentMessage> recentMessages) {
+        return enrichContext(userId, conversationId, recentMessages, true);
+    }
+
+    public List<AgentMessage> enrichContext(String userId,
+                                            String conversationId,
+                                            List<AgentMessage> recentMessages,
+                                            boolean includeLongTermMemory) {
         if (!storageProperties.isPersistenceEnabled()) {
             return recentMessages;
         }
         try {
-            String context = buildPersistentContext(userId, conversationId);
+            String context = buildPersistentContext(userId, conversationId, includeLongTermMemory);
             if (!StringUtils.hasText(context)) {
                 return recentMessages;
             }
@@ -75,13 +82,18 @@ public class AgentConversationMemoryService {
     }
 
     public void refreshAfterExchangeAsync(String conversationId, String userId) {
+        refreshAfterExchangeAsync(conversationId, userId, true);
+    }
+
+    public void refreshAfterExchangeAsync(String conversationId, String userId, boolean includeLongTermMemory) {
         if (!storageProperties.isPersistenceEnabled()
-                || (!storageProperties.isSummaryEnabled() && !storageProperties.isMemoryEnabled())
+                || (!storageProperties.isSummaryEnabled()
+                && !(includeLongTermMemory && storageProperties.isMemoryEnabled()))
                 || !StringUtils.hasText(userId)
                 || !StringUtils.hasText(conversationId)) {
             return;
         }
-        CompletableFuture.runAsync(() -> refreshAfterExchange(conversationId, userId))
+        CompletableFuture.runAsync(() -> refreshAfterExchange(conversationId, userId, includeLongTermMemory))
                 .exceptionally(error -> {
                     log.warn("refresh agent conversation summary/memory failed userId={} conversationId={} message={}",
                             userId, conversationId, error.getMessage());
@@ -89,9 +101,9 @@ public class AgentConversationMemoryService {
                 });
     }
 
-    private String buildPersistentContext(String userId, String conversationId) {
+    private String buildPersistentContext(String userId, String conversationId, boolean includeLongTermMemory) {
         List<String> parts = new ArrayList<>();
-        if (storageProperties.isMemoryEnabled()) {
+        if (includeLongTermMemory && storageProperties.isMemoryEnabled()) {
             List<AgentMemoryDto> memories = loadMemories(userId);
             if (!memories.isEmpty()) {
                 parts.add("用户长期记忆：\n" + memories.stream()
@@ -134,7 +146,7 @@ public class AgentConversationMemoryService {
         return memories;
     }
 
-    private void refreshAfterExchange(String conversationId, String userId) {
+    private void refreshAfterExchange(String conversationId, String userId, boolean includeLongTermMemory) {
         int messageCount = conversationRepository.countMessages(userId, conversationId);
         AgentConversationSummaryState currentSummary = conversationRepository.findSummary(userId, conversationId);
         if (!shouldRefresh(messageCount, currentSummary)) {
@@ -159,7 +171,7 @@ public class AgentConversationMemoryService {
                 redisCache.putSummary(userId, conversationId, state);
             }
         }
-        if (storageProperties.isMemoryEnabled()) {
+        if (includeLongTermMemory && storageProperties.isMemoryEnabled()) {
             List<AgentMemoryDto> extracted = extractMemories(
                     sourceMessages.subList(
                             Math.max(0, sourceMessages.size() - memorySourceLimit()),
