@@ -7,6 +7,7 @@ import com.tcmseek.ai.service.AiRequestContext;
 import com.tcmseek.ai.service.AiChatService;
 import com.tcmseek.ai.service.CsvExportStore;
 import com.tcmseek.ai.service.CsvRenderer;
+import com.tcmseek.ai.service.ShowModelChatService;
 import com.tcmseek.ai.service.TcmReasonChatService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -50,6 +51,8 @@ public class AiChatController {
 
     private final TcmReasonChatService tcmReasonChatService;
 
+    private final ShowModelChatService showModelChatService;
+
     private final CsvExportStore csvExportStore;
 
     private final CsvRenderer csvRenderer;
@@ -60,12 +63,14 @@ public class AiChatController {
 
     public AiChatController(AiChatService aiChatService,
                             TcmReasonChatService tcmReasonChatService,
+                            ShowModelChatService showModelChatService,
                             CsvExportStore csvExportStore,
                             CsvRenderer csvRenderer,
                             @Qualifier("aiModelExecutor") ExecutorService aiModelExecutor,
                             @Qualifier("aiStreamHeartbeatExecutor") ScheduledExecutorService aiStreamHeartbeatExecutor) {
         this.aiChatService = aiChatService;
         this.tcmReasonChatService = tcmReasonChatService;
+        this.showModelChatService = showModelChatService;
         this.csvExportStore = csvExportStore;
         this.csvRenderer = csvRenderer;
         this.aiModelExecutor = aiModelExecutor;
@@ -81,7 +86,126 @@ public class AiChatController {
         return tcmReasonChatService.chat(request, new AiRequestContext(requestId, userId, username, account));
     }
 
-    @PostMapping(value = "/aichat", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(@Valid @RequestBody AiChatRequest request,
+                                 @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
+                                 @RequestHeader(value = USER_ID_HEADER, required = false) String userId,
+                                 @RequestHeader(value = USERNAME_HEADER, required = false) String username,
+                                 @RequestHeader(value = ACCOUNT_HEADER, required = false) String account) {
+        SseEmitter emitter = new SseEmitter(0L);
+        Object sendLock = new Object();
+        AtomicBoolean completed = new AtomicBoolean(false);
+        AtomicReference<ScheduledFuture<?>> heartbeatRef = new AtomicReference<>();
+        ScheduledFuture<?> heartbeat = aiStreamHeartbeatExecutor.scheduleAtFixedRate(() -> {
+                    if (completed.get()) {
+                        ScheduledFuture<?> future = heartbeatRef.get();
+                        if (future != null) {
+                            future.cancel(false);
+                        }
+                        return;
+                    }
+                    sendEvent(emitter, sendLock, completed, "heartbeat", Map.of("ts", System.currentTimeMillis()));
+                },
+                15,
+                15,
+                TimeUnit.SECONDS);
+        heartbeatRef.set(heartbeat);
+
+        Runnable cleanup = () -> {
+            completed.set(true);
+            heartbeat.cancel(true);
+        };
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(error -> cleanup.run());
+
+        sendEvent(emitter, sendLock, completed, "start", Map.of("provider", "tcmreason"));
+        aiModelExecutor.execute(() -> {
+            try {
+                tcmReasonChatService.stream(
+                        request,
+                        new AiRequestContext(requestId, userId, username, account),
+                        (event, data) -> {
+                            sendEvent(emitter, sendLock, completed, event, data);
+                            if (completed.get()) {
+                                throw new IllegalStateException("SSE emitter closed");
+                            }
+                        });
+                sendEvent(emitter, sendLock, completed, "done", Map.of());
+                if (completed.compareAndSet(false, true)) {
+                    heartbeat.cancel(true);
+                    emitter.complete();
+                }
+            } catch (RuntimeException ex) {
+                sendEvent(emitter, sendLock, completed, "error", Map.of("message", streamErrorMessage(ex)));
+                if (completed.compareAndSet(false, true)) {
+                    heartbeat.cancel(true);
+                    emitter.complete();
+                }
+            }
+        });
+        return emitter;
+    }
+
+    @PostMapping(value = "/showmodel/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter showModelChatStream(@Valid @RequestBody AiChatRequest request,
+                                          @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
+        SseEmitter emitter = new SseEmitter(0L);
+        Object sendLock = new Object();
+        AtomicBoolean completed = new AtomicBoolean(false);
+        AtomicReference<ScheduledFuture<?>> heartbeatRef = new AtomicReference<>();
+        ScheduledFuture<?> heartbeat = aiStreamHeartbeatExecutor.scheduleAtFixedRate(() -> {
+                    if (completed.get()) {
+                        ScheduledFuture<?> future = heartbeatRef.get();
+                        if (future != null) {
+                            future.cancel(false);
+                        }
+                        return;
+                    }
+                    sendEvent(emitter, sendLock, completed, "heartbeat", Map.of("ts", System.currentTimeMillis()));
+                },
+                15,
+                15,
+                TimeUnit.SECONDS);
+        heartbeatRef.set(heartbeat);
+
+        Runnable cleanup = () -> {
+            completed.set(true);
+            heartbeat.cancel(true);
+        };
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(error -> cleanup.run());
+
+        sendEvent(emitter, sendLock, completed, "start", Map.of("provider", "deepseek", "memoryWindowRounds", 20));
+        aiModelExecutor.execute(() -> {
+            try {
+                showModelChatService.stream(
+                        request,
+                        requestId,
+                        (event, data) -> {
+                            sendEvent(emitter, sendLock, completed, event, data);
+                            if (completed.get()) {
+                                throw new IllegalStateException("SSE emitter closed");
+                            }
+                        });
+                sendEvent(emitter, sendLock, completed, "done", Map.of());
+                if (completed.compareAndSet(false, true)) {
+                    heartbeat.cancel(true);
+                    emitter.complete();
+                }
+            } catch (RuntimeException ex) {
+                sendEvent(emitter, sendLock, completed, "error", Map.of("message", streamErrorMessage(ex)));
+                if (completed.compareAndSet(false, true)) {
+                    heartbeat.cancel(true);
+                    emitter.complete();
+                }
+            }
+        });
+        return emitter;
+    }
+
+    @PostMapping(value = {"/chai", "/aichat"}, produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public AiChatResponse aichat(@Valid @RequestBody AiChatRequest request,
                                  @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
                                  @RequestHeader(value = USER_ID_HEADER, required = false) String userId,
@@ -90,7 +214,7 @@ public class AiChatController {
         return aiChatService.chat(request, new AiRequestContext(requestId, userId, username, account));
     }
 
-    @PostMapping(value = "/aichat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping(value = {"/chai/stream", "/aichat/stream"}, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter aichatStream(@Valid @RequestBody AiChatRequest request,
                                    @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
                                    @RequestHeader(value = USER_ID_HEADER, required = false) String userId,

@@ -21,10 +21,34 @@ public class ToolFallbackService {
     }
 
     public boolean tryExecute(String question) {
+        return tryExecute(question, true);
+    }
+
+    public boolean tryExecute(String question, boolean semanticFallbackEnabled) {
         if (!StringUtils.hasText(question)) {
             return false;
         }
         String normalized = normalize(question);
+
+        String semanticTopic = extractSemanticTopic(normalized);
+        if (semanticFallbackEnabled && StringUtils.hasText(semanticTopic) && looksLikeCompoundTargetQuestion(normalized)) {
+            String herbName = extractHerbAfterSemanticTopic(normalized);
+            if (StringUtils.hasText(herbName) && !looksLikePrescription(herbName)) {
+                graphTools.findHerbCompoundTargetsByTopic(herbName, semanticTopic);
+                return true;
+            }
+        }
+
+        if (looksLikeHerbPrescriptionConditionQuestion(normalized)) {
+            String herbName = extractHerbForPrescriptionCondition(normalized);
+            String conditionName = extractConditionForPrescriptionCondition(normalized);
+            if (StringUtils.hasText(herbName)
+                    && !looksLikeQuestionOnlySubject(herbName)
+                    && StringUtils.hasText(conditionName)) {
+                graphTools.findHerbDiseasePrescriptions(herbName, conditionName);
+                return true;
+            }
+        }
 
         if (containsAny(normalized, Arrays.asList("共同靶点", "共同基因", "共同作用靶点"))) {
             List<String> herbs = extractEntitiesBefore(normalized, firstMatched(normalized, Arrays.asList("共同作用靶点", "共同靶点", "共同基因")));
@@ -46,6 +70,20 @@ public class ToolFallbackService {
             List<String> herbs = extractEntitiesBefore(normalized, keyword);
             if (herbs.size() >= 2) {
                 graphTools.findCommonCompounds(String.join("，", herbs));
+                return true;
+            }
+        }
+
+        if (containsAny(normalized, Arrays.asList("化合物", "活性成分", "有效成分", "成分"))
+                && containsAny(normalized, Arrays.asList("靶标", "靶点", "靶向", "target", "Target", "基因"))) {
+            String herbName = extractSingleBeforeAny(normalized, Arrays.asList("包含哪些化合物", "有哪些化合物", "含有哪些化合物",
+                    "包含", "含有", "有哪些活性成分", "有哪些有效成分", "活性成分", "有效成分", "化合物", "成分"));
+            if (!StringUtils.hasText(herbName)) {
+                herbName = extractSingleBeforeAny(normalized, Arrays.asList("作用哪些靶标", "作用哪些靶点", "对应哪些靶标",
+                        "对应哪些靶点", "关联哪些靶标", "关联哪些靶点", "靶标", "靶点", "靶向", "target", "Target", "基因"));
+            }
+            if (StringUtils.hasText(herbName) && !looksLikePrescription(herbName)) {
+                graphTools.findHerbCompoundTargets(herbName);
                 return true;
             }
         }
@@ -96,7 +134,11 @@ public class ToolFallbackService {
                         Arrays.asList("的相关方剂", "的方剂", "相关方剂", "方剂", "有哪些", "有哪"));
             }
             if (StringUtils.hasText(diseaseName)) {
-                graphTools.findDiseasePrescriptions(diseaseName);
+                if (semanticFallbackEnabled) {
+                    graphTools.findDiseasePrescriptions(diseaseName);
+                } else {
+                    graphTools.findDiseasePrescriptionsExact(diseaseName);
+                }
                 return true;
             }
         }
@@ -165,7 +207,169 @@ public class ToolFallbackService {
             }
         }
 
+        if (looksLikeBroadTcmQuestion(normalized)) {
+            if (semanticFallbackEnabled) {
+                graphTools.findBySemanticIntent(question);
+            } else {
+                graphTools.findByGraphIntentExact(question);
+            }
+            return true;
+        }
+
         return false;
+    }
+
+    private boolean looksLikeCompoundTargetQuestion(String text) {
+        return containsAny(text, Arrays.asList(
+                "\u5316\u5408\u7269",
+                "\u6210\u5206",
+                "\u6d3b\u6027\u6210\u5206",
+                "\u6709\u6548\u6210\u5206"))
+                && containsAny(text, Arrays.asList(
+                "\u9776\u6807",
+                "\u9776\u70b9",
+                "\u57fa\u56e0",
+                "target",
+                "Target"));
+    }
+
+    private boolean looksLikeHerbPrescriptionConditionQuestion(String text) {
+        return containsAny(text, Arrays.asList(
+                "\u65b9\u5242",
+                "\u65b9\u5b50",
+                "\u836f\u65b9",
+                "\u5904\u65b9"))
+                && containsAny(text, Arrays.asList(
+                "\u6cbb\u7597",
+                "\u53ef\u4ee5\u6cbb",
+                "\u80fd\u6cbb",
+                "\u4e3b\u6cbb",
+                "\u6cbb"));
+    }
+
+    private String extractHerbForPrescriptionCondition(String text) {
+        String herbName = extractSingleBeforeAny(text, Arrays.asList(
+                "\u7684\u65b9\u5242",
+                "\u7684\u65b9\u5b50",
+                "\u7684\u836f\u65b9",
+                "\u7684\u5904\u65b9",
+                "\u65b9\u5242",
+                "\u65b9\u5b50",
+                "\u836f\u65b9",
+                "\u5904\u65b9"));
+        if (StringUtils.hasText(herbName)) {
+            int lastDe = herbName.lastIndexOf("\u7684");
+            if (lastDe >= 0 && lastDe < herbName.length() - 1) {
+                herbName = herbName.substring(lastDe + 1);
+            }
+        }
+        return cleanEntityText(herbName);
+    }
+
+    private String extractConditionForPrescriptionCondition(String text) {
+        return extractAfterAnyBeforeAny(text,
+                Arrays.asList(
+                        "\u53ef\u4ee5\u6cbb\u7597",
+                        "\u53ef\u4ee5\u6cbb",
+                        "\u80fd\u6cbb\u7597",
+                        "\u80fd\u6cbb",
+                        "\u4e3b\u6cbb",
+                        "\u6cbb\u7597",
+                        "\u6cbb"),
+                Arrays.asList(
+                        "\u7684\u76f8\u5173\u65b9\u5242",
+                        "\u7684\u65b9\u5242",
+                        "\u7684\u65b9\u5b50",
+                        "\u7684\u836f\u65b9",
+                        "\u7684\u5904\u65b9",
+                        "\u76f8\u5173\u65b9\u5242",
+                        "\u65b9\u5242",
+                        "\u65b9\u5b50",
+                        "\u836f\u65b9",
+                        "\u5904\u65b9",
+                        "\u6709\u54ea\u4e9b",
+                        "\u6709\u54ea"));
+    }
+
+    private boolean looksLikeQuestionOnlySubject(String text) {
+        if (!StringUtils.hasText(text)) {
+            return true;
+        }
+        String cleaned = text.trim();
+        return cleaned.length() > 20
+                || containsAny(cleaned, Arrays.asList(
+                "\u54ea\u4e9b",
+                "\u4ec0\u4e48",
+                "\u600e\u4e48",
+                "\u5982\u4f55",
+                "\u6709\u6ca1\u6709",
+                "\u53ef\u4ee5",
+                "\u80fd\u4e0d\u80fd"));
+    }
+
+    private boolean looksLikeBroadTcmQuestion(String text) {
+        return containsAny(text, Arrays.asList(
+                "\u65b9\u5242",
+                "\u65b9\u5b50",
+                "\u836f\u65b9",
+                "\u5904\u65b9",
+                "\u4e2d\u836f",
+                "\u4e2d\u533b",
+                "\u4e2d\u533b\u836f",
+                "\u836f\u6750",
+                "\u8349\u836f",
+                "\u75be\u75c5",
+                "\u75c7\u72b6",
+                "\u8bc1\u5019",
+                "\u8bc1\u578b",
+                "\u6cbb\u7597",
+                "\u8c03\u7406",
+                "\u7f13\u89e3",
+                "\u6539\u5584",
+                "\u4e3b\u6cbb",
+                "\u9002\u7528"));
+    }
+
+    private String extractSemanticTopic(String text) {
+        int index = text.indexOf("\u76f8\u5173");
+        if (index <= 0) {
+            return null;
+        }
+        return cleanEntityText(text.substring(0, index));
+    }
+
+    private String extractHerbAfterSemanticTopic(String text) {
+        int index = text.indexOf("\u76f8\u5173");
+        if (index < 0) {
+            return null;
+        }
+        String tail = text.substring(index + "\u76f8\u5173".length());
+        if (tail.startsWith("\u7684") || tail.startsWith("\u4e8e")) {
+            tail = tail.substring(1);
+        }
+        int end = firstIndexOfAny(tail, Arrays.asList(
+                "\u6d3b\u6027\u6210\u5206",
+                "\u6709\u6548\u6210\u5206",
+                "\u5316\u5408\u7269",
+                "\u6210\u5206",
+                "\u9776\u6807",
+                "\u9776\u70b9",
+                "\u57fa\u56e0"));
+        if (end > 0) {
+            tail = tail.substring(0, end);
+        }
+        return cleanEntityText(tail);
+    }
+
+    private int firstIndexOfAny(String text, List<String> keywords) {
+        int index = -1;
+        for (String keyword : keywords) {
+            int candidate = text.indexOf(keyword);
+            if (candidate >= 0 && (index < 0 || candidate < index)) {
+                index = candidate;
+            }
+        }
+        return index;
     }
 
     private String firstMatched(String text, List<String> keywords) {

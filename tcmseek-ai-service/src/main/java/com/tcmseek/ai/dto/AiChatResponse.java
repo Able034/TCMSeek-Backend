@@ -25,6 +25,8 @@ public class AiChatResponse {
 
     private Integer displayedResults;
 
+    private String reasoningTrace;
+
     private List<ToolCallResult> toolResults = new ArrayList<>();
 
     public AiChatResponse() {
@@ -114,6 +116,14 @@ public class AiChatResponse {
 
     public void setDisplayedResults(Integer displayedResults) {
         this.displayedResults = displayedResults;
+    }
+
+    public String getReasoningTrace() {
+        return reasoningTrace;
+    }
+
+    public void setReasoningTrace(String reasoningTrace) {
+        this.reasoningTrace = reasoningTrace;
     }
 
     public List<ToolCallResult> getToolResults() {

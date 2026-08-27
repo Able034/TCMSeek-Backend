@@ -42,12 +42,18 @@ spring:
           service-type: ai
           framework: spring-ai
   ai:
+    retry:
+      max-attempts: ${SPRING_AI_RETRY_MAX_ATTEMPTS:1}
+      backoff:
+        initial-interval: ${SPRING_AI_RETRY_INITIAL_INTERVAL:200ms}
+        max-interval: ${SPRING_AI_RETRY_MAX_INTERVAL:1s}
+        multiplier: ${SPRING_AI_RETRY_MULTIPLIER:2}
     openai:
       api-key: ${DEEPSEEK_API_KEY:}
       base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
       chat:
         options:
-          model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
+          model: ${DEEPSEEK_CHAT_MODEL:deepseek-v4-flash}
           temperature: ${DEEPSEEK_TEMPERATURE:0.2}
           max-tokens: ${DEEPSEEK_MAX_TOKENS:2048}
 
@@ -90,11 +96,25 @@ tcmseek:
         回答需专业、清晰、有理有据，避免西医术语。
     runtime:
       request-timeout: ${AI_REQUEST_TIMEOUT:60s}
-      max-retries: ${AI_MAX_RETRIES:1}
+      max-retries: ${AI_MAX_RETRIES:0}
       retry-backoff: ${AI_RETRY_BACKOFF:500ms}
       model-executor-pool-size: ${AI_MODEL_EXECUTOR_POOL_SIZE:8}
       question-log-max-length: ${AI_QUESTION_LOG_MAX_LENGTH:120}
       max-reply-chars: ${AI_MAX_REPLY_CHARS:4000}
+      agent-max-steps: ${AI_AGENT_MAX_STEPS:2}
+      semantic-fallback-enabled: ${AI_SEMANTIC_FALLBACK_ENABLED:false}
+    vector:
+      enabled: ${AI_VECTOR_ENABLED:false}
+      url: ${AI_VECTOR_POSTGRES_URL:jdbc:postgresql://127.0.0.1:5434/tcmseek_ai}
+      username: ${AI_VECTOR_POSTGRES_USERNAME:tcmseek}
+      password: ${AI_VECTOR_POSTGRES_PASSWORD:tcmseek_dev}
+      maximum-pool-size: ${AI_VECTOR_POSTGRES_POOL_SIZE:3}
+      dimension: ${AI_VECTOR_DIMENSION:1024}
+      search-limit: ${AI_VECTOR_SEARCH_LIMIT:30}
+      index-limit: ${AI_VECTOR_INDEX_LIMIT:1000}
+      embedding-base-url: ${QWEN_EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+      embedding-api-key: ${QWEN_EMBEDDING_API_KEY:}
+      embedding-model: ${QWEN_EMBEDDING_MODEL:text-embedding-v4}
     tools:
       query-limit: ${AI_TOOL_QUERY_LIMIT:1000}
       answer-item-limit: ${AI_TOOL_ANSWER_ITEM_LIMIT:8}
@@ -119,6 +139,8 @@ tcmseek:
       {csvDownloadUrl}
 
       请只根据工具结果回答。正文不要输出 CSV 原始 URL，前端会单独展示下载按钮。
+      如果工具结果 queryType 为 disease_prescriptions_no_direct_relation，或 evidenceType 为 semantic_disease_anchor_no_direct_prescription，
+      必须明确说明图谱未找到该疾病与方剂的直接治疗关系，不要把语义相关方剂表述为“可以治疗”。
       不要向用户展示函数名、工具名、接口名或括号中的内部实现名称，例如 findMedicalCasePrescriptions。
       输出格式固定为：1）一句核心结论；2）3 个以内要点；3）最多 {answerItemLimit} 行的精简 Markdown 表格。
       表格列数控制在 3 列以内，列名要短；长 ID 可以放在第一列，但不要额外解释每一行。
@@ -128,6 +150,8 @@ tcmseek:
       你是 TCMSeek 的中医药知识图谱问答助手。回答要专业、简洁、可验证。
       用户会用自然语言提问，不需要用户明确说“调用工具”。当问题涉及中药、方剂、化合物、靶点、
       疾病、证候、症状之间的关系时，优先选择最合适的知识图谱工具查询，再基于工具结果回答。
+      对“某中药含有哪些化合物，这些化合物作用哪些靶标/靶点”这类复合问题，
+      应优先使用中药-化合物-靶标组合查询工具，不要先查中药化合物再逐个调用单化合物靶标查询。
       回答正文面向普通用户，不要出现函数名、工具名、接口名或括号中的内部实现名称，例如 findMedicalCasePrescriptions。
       不要编造图谱中没有返回的数据；如果工具没有结果，请明确说明未查询到。
       当工具结果很多时，只总结核心结论并展示少量代表性结果，完整明细以接口返回的 csvDownloadUrl 和前端下载按钮为准。

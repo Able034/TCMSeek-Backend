@@ -34,6 +34,18 @@ public class ToolResultCompressor {
         for (ToolCallResult toolResult : toolResults) {
             compressed.add(compress(toolResult));
         }
+        List<ToolCallResult> resultsWithData = compressed.stream()
+                .filter(this::hasData)
+                .toList();
+        if (!resultsWithData.isEmpty()) {
+            List<ToolCallResult> noDirectDiseaseResults = resultsWithData.stream()
+                    .filter(this::isNoDirectPrescriptionRelation)
+                    .toList();
+            if (!noDirectDiseaseResults.isEmpty()) {
+                return noDirectDiseaseResults;
+            }
+            return resultsWithData;
+        }
         return compressed;
     }
 
@@ -75,6 +87,32 @@ public class ToolResultCompressor {
                 source.getToolName(),
                 source.getArguments() == null ? new HashMap<>() : new HashMap<>(source.getArguments()),
                 compressedResult);
+    }
+
+    private boolean hasData(ToolCallResult toolResult) {
+        return toolResult != null
+                && toolResult.getResult() != null
+                && toolResult.getResult().getItems() != null
+                && !toolResult.getResult().getItems().isEmpty();
+    }
+
+    private boolean isNoDirectPrescriptionRelation(ToolCallResult toolResult) {
+        if (toolResult == null || toolResult.getResult() == null) {
+            return false;
+        }
+        String queryType = toolResult.getResult().getQueryType();
+        if ("disease_prescriptions_no_direct_relation".equals(queryType)
+                || "condition_prescriptions_no_direct_relation".equals(queryType)) {
+            return true;
+        }
+        List<Map<String, Object>> items = toolResult.getResult().getItems();
+        if (items == null || items.isEmpty()) {
+            return false;
+        }
+        return items.stream()
+                .anyMatch(item -> item != null
+                        && ("semantic_disease_anchor_no_direct_prescription".equals(item.get("evidenceType"))
+                        || "semantic_condition_anchor_no_direct_prescription".equals(item.get("evidenceType"))));
     }
 
     private List<Map<String, Object>> limitItems(List<Map<String, Object>> sourceItems) {
