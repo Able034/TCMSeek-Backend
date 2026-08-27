@@ -2,6 +2,7 @@ package com.tcmseek.webmanage.service;
 
 import java.util.List;
 import com.tcmseek.webmanage.domain.CoreTcmHerbs;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 核心中药信息Service接口

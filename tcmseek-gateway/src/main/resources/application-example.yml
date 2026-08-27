@@ -103,6 +103,8 @@ tcmseek:
         - /ai/**
         - /api/web/tcmseek/tools/target-prediction/**
       excluded-paths:
+        - /api/ai/showmodel/**
+        - /ai/showmodel/**
         - /api/web/tcmseek/login
         - /api/web/tcmseek/regist
         - /api/web/tcmseek/sendCode
