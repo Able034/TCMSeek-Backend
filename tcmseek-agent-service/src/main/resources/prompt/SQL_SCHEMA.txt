@@ -1,0 +1,251 @@
+TCMSeek MySQL 可查询业务表字段
+
+SQL 生成约束：
+- 只使用下面列出的表名和字段名；字段名为数据库 snake_case，不要使用 Java camelCase。
+- 默认只生成 SELECT 查询；不要生成 INSERT、UPDATE、DELETE、DROP、ALTER、TRUNCATE。
+- 名称/描述类字段可使用 LIKE 进行模糊匹配。
+- 业务主键优先使用各表 *_id 字段；id 为数据库自增主键。
+
+1) core_tcm_herbs - 核心中药信息
+主键/唯一键：id(PK), tcm_herb_id(UK)
+字段：
+- id INT - 自增主键
+- tcm_herb_id VARCHAR - 中药ID
+- herb_name_zh VARCHAR - 中药中文名称
+- latin_name VARCHAR - 拉丁学名
+- type VARCHAR - 药材类型
+- efficacy_zh VARCHAR - 中文功效
+- efficacy_category VARCHAR - 功效分类
+- toxicity_zh VARCHAR - 中文毒性
+- toxic_description_zh VARCHAR - 中文毒性描述
+- pharmacopoeia_record VARCHAR - 药典收录情况
+- classification_zh VARCHAR - 生物学分类中文/科名
+- use_part VARCHAR - 用药部位
+- nature_taste_zh VARCHAR - 性味中文
+- meridian_zh VARCHAR - 归经中文
+- indications_zh TEXT - 主治中文
+
+2) tcm_compounds - 中药化合物理化性质
+主键/唯一键：id(PK), inchikey(UK)
+字段：
+- id INT - 自增主键
+- inchikey VARCHAR - InChIKey唯一标识
+- compound_name VARCHAR - 化合物名称
+- canonical_smiles TEXT - 标准SMILES
+- pubchem_cid BIGINT - PubChem CID
+- molecular_formula VARCHAR - 分子式
+
+3) compound_admet - 化合物ADMET预测结果
+主键/唯一键：id(PK), inchikey(UK)
+可与 tcm_compounds 通过 inchikey 关联。
+字段：
+- id INT - 自增主键
+- inchikey VARCHAR - 化合物InChIKey
+- ames DOUBLE - Ames致突变性
+- bbbp DOUBLE - 血脑屏障通透性
+- bioavailability INT - 生物利用度
+- caco2 DOUBLE - Caco-2通透性
+- carcinogens INT - 致癌性
+- clearance_microsome DOUBLE - 微粒体清除率
+- clintox INT - 临床毒性
+- cyp1a2_inhibition DOUBLE - CYP1A2抑制
+- cyp2c19_inhibition DOUBLE - CYP2C19抑制
+- cyp2c9_inhibition INT - CYP2C9抑制
+- cyp2c9_substrate DOUBLE - CYP2C9底物
+- cyp2d6_inhibition INT - CYP2D6抑制
+- cyp2d6_substrate DOUBLE - CYP2D6底物
+- cyp3a4_inhibition DOUBLE - CYP3A4抑制
+- cyp3a4_substrate DOUBLE - CYP3A4底物
+- dili DOUBLE - 药物性肝损伤
+- freesolv DOUBLE - 自由溶解度
+- herg_blockers DOUBLE - hERG阻断
+- herg_karim DOUBLE - hERG Karim
+- hia INT - 人体肠道吸收
+- ld50 DOUBLE - 半致死量
+- lipophilicity DOUBLE - 亲脂性
+- pampa DOUBLE - PAMPA渗透性
+- pgp DOUBLE - P-糖蛋白底物
+- ppbr DOUBLE - 血浆蛋白结合率
+- skin DOUBLE - 皮肤渗透性
+- solubility DOUBLE - 溶解度
+
+4) targets - 靶标/基因信息
+主键/唯一键：id(PK), tcm_tar_id(UK), gene_entrez_id(UK)
+字段：
+- id INT - 自增主键
+- tcm_tar_id VARCHAR - 靶标ID
+- gene_entrez_id INT - Gene Entrez ID
+- symbol VARCHAR - 基因符号
+- uniprot_id VARCHAR - UniProt ID
+- ensembl_id VARCHAR - Ensembl ID
+- description TEXT - 基因描述
+- type_of_gene VARCHAR - 基因类型
+
+5) diseases - 疾病信息
+主键/唯一键：id(PK), disease_id(UK)
+字段：
+- id INT - 自增主键
+- disease_id VARCHAR - 疾病ID
+- disease_name VARCHAR - 疾病名称英文
+- source VARCHAR - 数据来源
+
+6) phenotypes - 表型信息
+主键/唯一键：id(PK), phenotype_id(UK)
+字段：
+- id INT - 自增主键
+- phenotype_id VARCHAR - 表型ID
+- phenotype_name VARCHAR - 表型名称
+- source VARCHAR - 数据来源
+
+7) pathways - 通路信息
+主键/唯一键：id(PK), pathway_id(UK)
+字段：
+- id INT - 自增主键
+- pathway_id VARCHAR - 通路ID/KEGG ID
+- name VARCHAR - 通路名称
+- source VARCHAR - 数据来源
+
+8) tcm_prescriptions - TCM方剂/中成药信息
+主键：id(PK)
+字段：
+- id INT - 自增主键
+- tcm_prescription_id VARCHAR - 方剂ID
+- name_zh VARCHAR - 方剂中文名称
+- source TEXT - 来源典籍
+- indications_zh TEXT - 主治中文
+- effects_zh TEXT - 功效中文
+
+9) tcm_symptoms - 中医症状信息
+主键/唯一键：id(PK), tcm_symptom_id(UK)
+字段：
+- id INT - 自增主键
+- tcm_symptom_id VARCHAR - 中医症状ID
+- symptom_name_zh VARCHAR - 症状中文名称
+- symptom_definition TEXT - 症状定义
+- symptom_locus VARCHAR - 症状部位
+- symptom_property VARCHAR - 症状属性
+- type VARCHAR - 类型
+
+10) tcm_syndromes - 中医证候信息
+主键/唯一键：id(PK), tcm_syndrome_id(UK)
+字段：
+- id INT - 自增主键
+- tcm_syndrome_id VARCHAR - 证候ID
+- syndrome_name_zh VARCHAR - 证候中文名称
+- syndrome_definition_zh TEXT - 证候中文定义
+- category_zh VARCHAR - 中文分类
+- source VARCHAR - 数据来源
+
+11) wm_symptoms - 西医症状信息
+主键/唯一键：id(PK), wm_symptom_id(UK)
+字段：
+- id INT - 自增主键
+- wm_symptom_id VARCHAR - 西医症状ID
+- symptom_name VARCHAR - 症状英文名称
+- umls_id VARCHAR - UMLS标识符
+
+12) medical_cases - 中医医案信息
+主键/唯一键：id(PK), med_case_id(UK)
+字段：
+- id INT - 自增主键
+- med_case_id VARCHAR - 医案ID
+- case_report TEXT - 医案文本/全文报告
+- physician VARCHAR - 医家/医生
+- tcm_disease VARCHAR - 中医病名
+- wm_disease VARCHAR - 西医病名
+- tcm_symptoms TEXT - 中医症状
+- wm_symptoms TEXT - 西医症状
+- urination_defecation TEXT - 二便情况
+- pulse_condition VARCHAR - 脉象
+- tongue_appearance VARCHAR - 舌象
+- tcm_syndrome TEXT - 中医证候
+- tcm_treatment TEXT - 中医治法
+- prescription VARCHAR - 方剂
+- herb_composition TEXT - 中药组成
+
+13) 实体关系表/JOIN 规则
+说明：跨实体查询时优先使用下面关系表；JOIN 使用业务ID字段，不要用自增 id 推断关系。
+
+直接关联：
+- tcm_compounds.inchikey = compound_admet.inchikey - 化合物理化性质与ADMET
+
+关系表：
+- herb_compound_rel - 中药-化合物
+  字段：tcm_herb_id, inchikey, annotation, source
+  JOIN：core_tcm_herbs.tcm_herb_id = herb_compound_rel.tcm_herb_id；tcm_compounds.inchikey = herb_compound_rel.inchikey
+
+- compound_target_rel - 化合物-靶标/基因
+  字段：inchikey, tcm_tar_id, source
+  JOIN：tcm_compounds.inchikey = compound_target_rel.inchikey；targets.tcm_tar_id = compound_target_rel.tcm_tar_id
+
+- disease_gene_rel - 疾病-靶标/基因
+  字段：disease_id, tcm_tar_id, relation, source
+  JOIN：diseases.disease_id = disease_gene_rel.disease_id；targets.tcm_tar_id = disease_gene_rel.tcm_tar_id
+
+- pathway_target_rel - 通路-靶标/基因
+  字段：pathway_id, tcm_tar_id
+  JOIN：pathways.pathway_id = pathway_target_rel.pathway_id；targets.tcm_tar_id = pathway_target_rel.tcm_tar_id
+
+- phenotype_target_rel - 表型-靶标/基因
+  字段：phenotype_id, tcm_tar_id
+  JOIN：phenotypes.phenotype_id = phenotype_target_rel.phenotype_id；targets.tcm_tar_id = phenotype_target_rel.tcm_tar_id
+
+- herb_disease_rel - 中药-疾病
+  字段：tcm_herb_id, disease_id
+  JOIN：core_tcm_herbs.tcm_herb_id = herb_disease_rel.tcm_herb_id；diseases.disease_id = herb_disease_rel.disease_id
+
+- herb_symptom_rel - 中药-中医症状
+  字段：tcm_herb_id, tcm_symptom_id
+  JOIN：core_tcm_herbs.tcm_herb_id = herb_symptom_rel.tcm_herb_id；tcm_symptoms.tcm_symptom_id = herb_symptom_rel.tcm_symptom_id
+
+- herb_syndrome_rel - 中药-中医证候
+  字段：tcm_herb_id, tcm_syndrome_id, syndrome_name, source
+  JOIN：core_tcm_herbs.tcm_herb_id = herb_syndrome_rel.tcm_herb_id；tcm_syndromes.tcm_syndrome_id = herb_syndrome_rel.tcm_syndrome_id
+
+- medical_case_herb_rel - 医案-中药
+  字段：med_case_id, tcm_herb_id
+  JOIN：medical_cases.med_case_id = medical_case_herb_rel.med_case_id；core_tcm_herbs.tcm_herb_id = medical_case_herb_rel.tcm_herb_id
+
+- medical_case_prescription_rel - 医案-方剂
+  字段：med_case_id, tcm_prescription_id, perscription_name_zh
+  JOIN：medical_cases.med_case_id = medical_case_prescription_rel.med_case_id；tcm_prescriptions.tcm_prescription_id = medical_case_prescription_rel.tcm_prescription_id
+
+- prescription_core_herb_rel - 方剂-核心中药
+  字段：tcm_prescription_id, tcm_herb_id
+  JOIN：tcm_prescriptions.tcm_prescription_id = prescription_core_herb_rel.tcm_prescription_id；core_tcm_herbs.tcm_herb_id = prescription_core_herb_rel.tcm_herb_id
+
+- prescription_disease_rel - 方剂-疾病
+  字段：tcm_prescription_id, disease_id
+  JOIN：tcm_prescriptions.tcm_prescription_id = prescription_disease_rel.tcm_prescription_id；diseases.disease_id = prescription_disease_rel.disease_id
+
+- prescription_symptom_rel - 方剂-中医症状
+  字段：tcm_prescription_id, tcm_symptom_id, prescription_name
+  JOIN：tcm_prescriptions.tcm_prescription_id = prescription_symptom_rel.tcm_prescription_id；tcm_symptoms.tcm_symptom_id = prescription_symptom_rel.tcm_symptom_id
+
+- prescription_syndrome_rel - 方剂-中医证候
+  字段：tcm_prescription_id, tcm_syndrome_id, prescription_name
+  JOIN：tcm_prescriptions.tcm_prescription_id = prescription_syndrome_rel.tcm_prescription_id；tcm_syndromes.tcm_syndrome_id = prescription_syndrome_rel.tcm_syndrome_id
+
+- syndrome_gene_rel - 中医证候-靶标/基因
+  字段：tcm_syndrome_id, tcm_tar_id, source
+  JOIN：tcm_syndromes.tcm_syndrome_id = syndrome_gene_rel.tcm_syndrome_id；targets.tcm_tar_id = syndrome_gene_rel.tcm_tar_id
+
+- syndrome_symptom_rel - 中医证候-中医症状
+  字段：tcm_syndrome_id, tcm_symptom_id
+  JOIN：tcm_syndromes.tcm_syndrome_id = syndrome_symptom_rel.tcm_syndrome_id；tcm_symptoms.tcm_symptom_id = syndrome_symptom_rel.tcm_symptom_id
+
+- tcm_wm_symptom_rel - 中医症状-西医症状
+  字段：tcm_symptom_id, wm_symptom_id
+  JOIN：tcm_symptoms.tcm_symptom_id = tcm_wm_symptom_rel.tcm_symptom_id；wm_symptoms.wm_symptom_id = tcm_wm_symptom_rel.wm_symptom_id
+
+- wm_symptom_gene_rel - 西医症状-靶标/基因
+  字段：wm_symptom_id, tcm_tar_id
+  JOIN：wm_symptoms.wm_symptom_id = wm_symptom_gene_rel.wm_symptom_id；targets.tcm_tar_id = wm_symptom_gene_rel.tcm_tar_id
+
+常用路径：
+- 查某中药的化合物/靶标：core_tcm_herbs -> herb_compound_rel -> tcm_compounds -> compound_target_rel -> targets
+- 查某疾病相关中药：diseases -> disease_gene_rel -> targets -> compound_target_rel -> tcm_compounds -> herb_compound_rel -> core_tcm_herbs
+- 查某方剂的中药/化合物/靶标：tcm_prescriptions -> prescription_core_herb_rel -> core_tcm_herbs -> herb_compound_rel -> tcm_compounds -> compound_target_rel -> targets
+- 查方剂关联疾病/症状/证候：tcm_prescriptions -> prescription_disease_rel / prescription_symptom_rel / prescription_syndrome_rel
+- 查证候关联症状/靶标：tcm_syndromes -> syndrome_symptom_rel / syndrome_gene_rel
+- 查中西医症状映射及靶标：tcm_symptoms -> tcm_wm_symptom_rel -> wm_symptoms -> wm_symptom_gene_rel -> targets

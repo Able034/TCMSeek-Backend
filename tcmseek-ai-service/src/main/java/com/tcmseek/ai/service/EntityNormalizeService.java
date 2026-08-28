@@ -11,6 +11,8 @@ import java.util.Map;
 public class EntityNormalizeService {
 
     private static final List<AliasRule> DISEASE_ALIASES = List.of(
+            new AliasRule("\u766b\u75eb\u75c5", "epilepsy"),
+            new AliasRule("\u766b\u75eb", "epilepsy"),
             new AliasRule("2型糖尿病", "type 2 diabetes mellitus"),
             new AliasRule("二型糖尿病", "type 2 diabetes mellitus"),
             new AliasRule("ii型糖尿病", "type 2 diabetes mellitus"),

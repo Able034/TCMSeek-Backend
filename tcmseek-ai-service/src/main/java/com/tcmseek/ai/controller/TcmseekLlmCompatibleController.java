@@ -62,7 +62,7 @@ public class TcmseekLlmCompatibleController {
         return ApiResult.success(tcmReasonChatService.chat(request, new AiRequestContext(requestId, userId, username, account)));
     }
 
-    @PostMapping(value = "/aichat", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    @PostMapping(value = {"/chai", "/aichat"}, produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ApiResult<AiChatResponse> aichat(@Valid @RequestBody AiChatRequest request,
                                             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
                                             @RequestHeader(value = USER_ID_HEADER, required = false) String userId,
@@ -71,7 +71,7 @@ public class TcmseekLlmCompatibleController {
         return ApiResult.success(aiChatService.chat(request, new AiRequestContext(requestId, userId, username, account)));
     }
 
-    @GetMapping(value = "/aichat/exports/{exportId}", produces = "text/csv;charset=UTF-8")
+    @GetMapping(value = {"/chai/exports/{exportId}", "/aichat/exports/{exportId}"}, produces = "text/csv;charset=UTF-8")
     public ResponseEntity<String> exportCsv(@PathVariable String exportId,
                                             @RequestHeader(value = USER_ID_HEADER, required = false) String userId) {
         CsvExportStore.ExportRecord record = csvExportStore.get(exportId, userId);

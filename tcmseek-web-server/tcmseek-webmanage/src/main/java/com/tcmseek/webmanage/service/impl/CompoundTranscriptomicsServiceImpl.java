@@ -104,6 +104,7 @@ public class CompoundTranscriptomicsServiceImpl implements ICompoundTranscriptom
      */
     @Override
     public void excelinput(MultipartFile file) {
+
         ExcelImportTemplate.ImportResult result = ExcelImportTemplate.importExcel(
                 file,
                 CompoundTranscriptomics.class,
@@ -112,6 +113,7 @@ public class CompoundTranscriptomicsServiceImpl implements ICompoundTranscriptom
                 keys -> compoundTranscriptomicsMapper.selectByCompositeKeys(keys),
                 batch -> compoundTranscriptomicsMapper.batchInsertCompoundTranscriptomics(batch),
                 batch -> batch.forEach(compoundTranscriptomicsMapper::updateCompoundTranscriptomics));
+
         log.info("excel导入结果：total={}, valid={}, insert={}, update={}, dupExcel={}, missingRequired={}",
                 result.getTotal(), result.getValid(), result.getInserted(), result.getUpdated(),
                 result.getDuplicatedInExcel(), result.getMissingRequired());

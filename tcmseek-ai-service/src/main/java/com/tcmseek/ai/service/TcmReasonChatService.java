@@ -20,22 +20,29 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
@@ -103,9 +110,46 @@ public class TcmReasonChatService {
         return response;
     }
 
+    public void stream(AiChatRequest request, AiRequestContext context, AiChatService.StreamEventSink sink) {
+        AiRequestContext requestContext = context == null ? AiRequestContext.empty() : context;
+        long startedAt = System.currentTimeMillis();
+        String sessionId = request == null ? null : request.getSessionId();
+        List<AiMessage> messageContext = sessionManager.buildContext(
+                sessionId,
+                request == null ? null : request.getMessages(),
+                requestContext);
+        String latestQuestion = latestUserQuestion(request);
+        log.info("tcmreason chat stream started requestId={} userId={} sessionId={} question={}",
+                requestContext.getRequestId(), requestContext.getUserId(), sessionId, abbreviate(latestQuestion));
+
+        AiChatResponse response = callTcmReasonStream(messageContext, delta -> sendDelta(sink, delta));
+        response.setProvider("tcmreason");
+        response.setFinishReason("tcmreason_answer");
+        if (!StringUtils.hasText(response.getId())) {
+            response.setId(UUID.randomUUID().toString());
+        }
+
+        if (request != null) {
+            sessionManager.appendExchange(
+                    sessionId,
+                    request.getMessages(),
+                    response.getReply(),
+                    requestContext,
+                    response,
+                    List.of(),
+                    System.currentTimeMillis() - startedAt);
+        }
+        if (sink != null) {
+            sink.send("metadata", response);
+        }
+        log.info("tcmreason chat stream completed requestId={} userId={} sessionId={} model={} costMs={}",
+                requestContext.getRequestId(), requestContext.getUserId(), sessionId,
+                response.getModel(), System.currentTimeMillis() - startedAt);
+    }
+
     private AiChatResponse callTcmReason(List<AiMessage> context) {
         String endpoint = chatCompletionsUrl();
-        ObjectNode payload = buildPayload(context);
+        ObjectNode payload = buildPayload(context, false);
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint))
                 .timeout(readTimeout())
                 .header("Content-Type", "application/json")
@@ -143,12 +187,48 @@ public class TcmReasonChatService {
         });
     }
 
-    private ObjectNode buildPayload(List<AiMessage> context) {
+    private AiChatResponse callTcmReasonStream(List<AiMessage> context, Consumer<String> onDelta) {
+        String endpoint = chatCompletionsUrl();
+        ObjectNode payload = buildPayload(context, true);
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(readTimeout())
+                .header("Accept", "text/event-stream")
+                .header("Cache-Control", "no-cache")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload.toString()));
+        if (StringUtils.hasText(properties.getApiKey())) {
+            requestBuilder.header("Authorization", "Bearer " + properties.getApiKey().trim());
+        }
+        HttpRequest request = requestBuilder.build();
+
+        return runtimeGuard.executeModelCall("tcmreason-chat-stream", () -> {
+            try {
+                return callStreamWithTimeout(request, onDelta);
+            } catch (AiServiceException ex) {
+                throw ex;
+            } catch (TimeoutException ex) {
+                throw new AiServiceException(HttpStatus.GATEWAY_TIMEOUT, "TCMREASON_TIMEOUT",
+                        "TCMReason model response timed out.", ex);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new AiServiceException(HttpStatus.SERVICE_UNAVAILABLE, "TCMREASON_INTERRUPTED",
+                        "TCMReason request was interrupted.", ex);
+            } catch (ExecutionException ex) {
+                throw new AiServiceException(HttpStatus.BAD_GATEWAY, "TCMREASON_UNAVAILABLE",
+                        "TCMReason model service is temporarily unavailable.", ex.getCause());
+            } catch (Exception ex) {
+                throw new AiServiceException(HttpStatus.BAD_GATEWAY, "TCMREASON_UNAVAILABLE",
+                        "TCMReason model service is temporarily unavailable.", ex);
+            }
+        });
+    }
+
+    private ObjectNode buildPayload(List<AiMessage> context, boolean stream) {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model());
         body.put("temperature", properties.getDefaultTemperature() == null ? 0.3d : properties.getDefaultTemperature());
         body.put("max_tokens", properties.getDefaultMaxTokens() == null ? 1024 : properties.getDefaultMaxTokens());
-        body.put("stream", Boolean.TRUE.equals(properties.getStream()));
+        body.put("stream", stream);
 
         ArrayNode messages = body.putArray("messages");
         if (StringUtils.hasText(properties.getSystemPrompt())) {
@@ -162,6 +242,32 @@ public class TcmReasonChatService {
             item.put("content", message.getContent());
         }
         return body;
+    }
+
+    private AiChatResponse callStreamWithTimeout(HttpRequest request, Consumer<String> onDelta)
+            throws ExecutionException, InterruptedException, TimeoutException {
+        CompletableFuture<AiChatResponse> future = CompletableFuture.supplyAsync(() -> {
+            try {
+                HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    String body = readBody(response.body());
+                    String message = extractErrorMessage(body);
+                    throw new AiServiceException(HttpStatus.BAD_GATEWAY, "TCMREASON_UNAVAILABLE",
+                            StringUtils.hasText(message) ? message : "TCMReason returned HTTP " + response.statusCode(), null);
+                }
+                return parseStreamResponse(response.body(), onDelta);
+            } catch (AiServiceException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+        }, aiModelExecutor);
+        try {
+            return future.get(readTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ex) {
+            future.cancel(true);
+            throw ex;
+        }
     }
 
     private AiChatResponse parseResponse(String responseBody) throws JsonProcessingException {
@@ -180,6 +286,65 @@ public class TcmReasonChatService {
         AiChatResponse response = new AiChatResponse(reply, "tcmreason", root.path("model").asText(model()));
         response.setId(root.path("id").asText(null));
         response.setUsage(parseUsage(root.path("usage")));
+        return response;
+    }
+
+    private AiChatResponse parseStreamResponse(InputStream body, Consumer<String> onDelta) throws IOException {
+        StringBuilder reply = new StringBuilder();
+        String responseId = null;
+        String responseModel = model();
+        AiChatResponse.Usage usage = null;
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!StringUtils.hasText(line) || line.startsWith(":") || !line.startsWith("data:")) {
+                    continue;
+                }
+                String data = line.substring("data:".length()).trim();
+                if ("[DONE]".equals(data)) {
+                    break;
+                }
+                JsonNode root = objectMapper.readTree(data);
+                String errorMessage = extractErrorMessage(data);
+                if (StringUtils.hasText(errorMessage)) {
+                    throw new AiServiceException(HttpStatus.BAD_GATEWAY, "TCMREASON_UNAVAILABLE", errorMessage, null);
+                }
+                if (StringUtils.hasText(root.path("id").asText(null))) {
+                    responseId = root.path("id").asText();
+                }
+                if (StringUtils.hasText(root.path("model").asText(null))) {
+                    responseModel = root.path("model").asText();
+                }
+                AiChatResponse.Usage parsedUsage = parseUsage(root.path("usage"));
+                if (parsedUsage != null) {
+                    usage = parsedUsage;
+                }
+                JsonNode choices = root.path("choices");
+                if (!choices.isArray() || choices.isEmpty()) {
+                    continue;
+                }
+                JsonNode choice = choices.get(0);
+                String content = choice.path("delta").path("content").asText("");
+                if (!StringUtils.hasLength(content)) {
+                    content = choice.path("message").path("content").asText("");
+                }
+                if (StringUtils.hasLength(content)) {
+                    reply.append(content);
+                    if (onDelta != null) {
+                        onDelta.accept(content);
+                    }
+                }
+            }
+        }
+
+        if (!StringUtils.hasText(reply.toString())) {
+            throw new AiServiceException(HttpStatus.BAD_GATEWAY, "TCMREASON_BAD_RESPONSE",
+                    "TCMReason returned an empty streaming response.", null);
+        }
+        AiChatResponse response = new AiChatResponse(reply.toString(), "tcmreason", responseModel);
+        response.setId(responseId);
+        response.setUsage(usage);
         return response;
     }
 
@@ -287,6 +452,19 @@ public class TcmReasonChatService {
             log.debug("parse TCMReason error body failed body={}", body);
         }
         return null;
+    }
+
+    private void sendDelta(AiChatService.StreamEventSink sink, String delta) {
+        if (sink != null && StringUtils.hasLength(delta)) {
+            sink.send("delta", Map.of("text", delta));
+        }
+    }
+
+    private String readBody(InputStream body) throws IOException {
+        if (body == null) {
+            return "";
+        }
+        return new String(body.readAllBytes(), StandardCharsets.UTF_8);
     }
 
     private List<AiMessage> sanitize(List<AiMessage> messages) {

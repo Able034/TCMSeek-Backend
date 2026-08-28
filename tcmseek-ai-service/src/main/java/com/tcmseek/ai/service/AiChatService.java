@@ -10,7 +10,6 @@ import com.tcmseek.ai.dto.AiChatResponse;
 import com.tcmseek.ai.dto.AiMessage;
 import com.tcmseek.ai.dto.ToolCallResult;
 import com.tcmseek.ai.exception.AiServiceException;
-import com.tcmseek.ai.tools.TcmGraphTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -29,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -48,17 +48,16 @@ public class AiChatService {
     private final ChatClient.Builder chatClientBuilder;
     private final AiPromptProperties promptProperties;
     private final AiRuntimeProperties runtimeProperties;
-    private final TcmGraphTools tcmGraphTools;
     private final ToolExecutionRecorder toolExecutionRecorder;
+    private final AgentOrchestrator agentOrchestrator;
     private final AiSessionManager sessionManager;
     private final AiGraphBuilder graphBuilder;
     private final CsvExportStore csvExportStore;
-    private final ToolFallbackService toolFallbackService;
     private final ToolResultCompressor toolResultCompressor;
     private final ObjectMapper objectMapper;
     private final ExecutorService aiModelExecutor;
 
-    @Value("${spring.ai.openai.chat.options.model:deepseek-chat}")
+    @Value("${spring.ai.openai.chat.options.model:deepseek-v4-flash}")
     private String model;
 
     @FunctionalInterface
@@ -66,27 +65,46 @@ public class AiChatService {
         void send(String event, Object data);
     }
 
+    public record ChatRunOptions(boolean semanticFallbackEnabled,
+                                 boolean exposeToolPayload,
+                                 String systemPrompt,
+                                 String summaryPromptTemplate,
+                                 String noToolResultMessage) {
+
+        public static ChatRunOptions defaults() {
+            return defaults(false);
+        }
+
+        public static ChatRunOptions defaults(boolean semanticFallbackEnabled) {
+            return new ChatRunOptions(semanticFallbackEnabled, true, null, null, null);
+        }
+
+        public static ChatRunOptions showModel(String systemPrompt,
+                                               String summaryPromptTemplate,
+                                               String noToolResultMessage) {
+            return new ChatRunOptions(false, false, systemPrompt, summaryPromptTemplate, noToolResultMessage);
+        }
+    }
+
     public AiChatService(ChatClient.Builder chatClientBuilder,
                          AiPromptProperties promptProperties,
                          AiRuntimeProperties runtimeProperties,
-                         TcmGraphTools tcmGraphTools,
                          ToolExecutionRecorder toolExecutionRecorder,
+                         AgentOrchestrator agentOrchestrator,
                          AiSessionManager sessionManager,
                          AiGraphBuilder graphBuilder,
                          CsvExportStore csvExportStore,
-                         ToolFallbackService toolFallbackService,
                          ToolResultCompressor toolResultCompressor,
                          ObjectMapper objectMapper,
                          ExecutorService aiModelExecutor) {
         this.chatClientBuilder = chatClientBuilder;
         this.promptProperties = promptProperties;
         this.runtimeProperties = runtimeProperties;
-        this.tcmGraphTools = tcmGraphTools;
         this.toolExecutionRecorder = toolExecutionRecorder;
+        this.agentOrchestrator = agentOrchestrator;
         this.sessionManager = sessionManager;
         this.graphBuilder = graphBuilder;
         this.csvExportStore = csvExportStore;
-        this.toolFallbackService = toolFallbackService;
         this.toolResultCompressor = toolResultCompressor;
         this.objectMapper = objectMapper;
         this.aiModelExecutor = aiModelExecutor;
@@ -110,22 +128,23 @@ public class AiChatService {
                 requestContext.getRequestId(), requestContext.getUserId(), requestContext.getUsername(),
                 requestContext.getAccount(), sessionId, abbreviate(latestQuestion));
 
-        List<ToolCallResult> toolResults = executeFallback(latestQuestion);
-        String reply = null;
-        String finishReason = "model_answer";
-        if (toolResults.isEmpty()) {
-            toolExecutionRecorder.start();
-            try {
-                reply = callModel(userPrompt);
-            } catch (RuntimeException ex) {
-                throw downstreamException(ex);
-            } finally {
-                toolResults = toolExecutionRecorder.finish();
-            }
+        AgentOrchestrator.AgentRunResult agentRun;
+        try {
+            agentRun = agentOrchestrator.run(latestQuestion, () -> callModel(userPrompt));
+        } catch (RuntimeException ex) {
+            throw downstreamException(ex);
         }
+        List<ToolCallResult> toolResults = agentRun.toolResults();
+        String reply = agentRun.reply();
+        String finishReason = agentRun.outcome() == AgentOrchestrator.AgentOutcome.MODEL_ONLY
+                ? "model_answer"
+                : "tool_observed";
+        log.info("ai agent completed requestId={} userId={} sessionId={} outcome={} actions={} steps={}",
+                requestContext.getRequestId(), requestContext.getUserId(), sessionId,
+                agentRun.outcome(), agentRun.actionsUsed(), agentRun.describeSteps());
 
-        String exportUrl = buildCsvDownloadUrl(toolResults, requestContext);
         List<ToolCallResult> responseToolResults = toolResultCompressor.forAnswer(toolResults);
+        String exportUrl = buildCsvDownloadUrl(responseToolResults, requestContext);
         if (!responseToolResults.isEmpty()) {
             if (!hasAnyToolData(responseToolResults)) {
                 finishReason = "tool_no_result";
@@ -136,7 +155,7 @@ public class AiChatService {
                     finishReason = "tool_summarized";
                 } catch (RuntimeException ex) {
                     log.warn("ai summarize failed, fallback to deterministic tool summary requestId={} userId={} sessionId={} message={}",
-                            requestContext.getRequestId(), requestContext.getUserId(), sessionId, ex.getMessage(), ex);
+                            requestContext.getRequestId(), requestContext.getUserId(), sessionId, ex.getMessage());
                     reply = fallbackToolReply(responseToolResults, exportUrl);
                     finishReason = "tool_summary_fallback";
                 }
@@ -149,7 +168,7 @@ public class AiChatService {
         response.setId(UUID.randomUUID().toString());
         response.setFinishReason(finishReason);
         response.setToolResults(responseToolResults);
-        enrichToolPayload(response, toolResults, exportUrl);
+        enrichToolPayload(response, responseToolResults, exportUrl);
 
         if (request != null) {
             sessionManager.appendExchange(
@@ -169,11 +188,55 @@ public class AiChatService {
 
     public void stream(AiChatRequest request, AiRequestContext context, StreamEventSink sink) {
         AiRequestContext requestContext = context == null ? AiRequestContext.empty() : context;
-        long startedAt = System.currentTimeMillis();
         List<AiMessage> messageContext = sessionManager.buildContext(
                 request != null ? request.getSessionId() : null,
                 request != null ? request.getMessages() : null,
                 requestContext);
+        streamInternal(request, requestContext, messageContext, true, defaultRunOptions(), sink);
+    }
+
+    public AiChatResponse streamWithContext(AiChatRequest request,
+                                            AiRequestContext context,
+                                            List<AiMessage> messageContext,
+                                            StreamEventSink sink) {
+        return streamWithContext(request, context, messageContext,
+                runtimeProperties.isSemanticFallbackEnabled(), sink);
+    }
+
+    public AiChatResponse streamWithContext(AiChatRequest request,
+                                            AiRequestContext context,
+                                            List<AiMessage> messageContext,
+                                            boolean semanticFallbackEnabled,
+                                            StreamEventSink sink) {
+        return streamWithContext(request, context, messageContext,
+                new ChatRunOptions(semanticFallbackEnabled, true, null, null, null), sink);
+    }
+
+    public AiChatResponse streamWithContext(AiChatRequest request,
+                                            AiRequestContext context,
+                                            List<AiMessage> messageContext,
+                                            ChatRunOptions options,
+                                            StreamEventSink sink) {
+        AiRequestContext requestContext = context == null ? AiRequestContext.empty() : context;
+        return streamInternal(request, requestContext, messageContext, false, options, sink);
+    }
+
+    private AiChatResponse streamInternal(AiChatRequest request,
+                                          AiRequestContext requestContext,
+                                          List<AiMessage> messageContext,
+                                          boolean persistExchange,
+                                          StreamEventSink sink) {
+        return streamInternal(request, requestContext, messageContext, persistExchange, defaultRunOptions(), sink);
+    }
+
+    private AiChatResponse streamInternal(AiChatRequest request,
+                                          AiRequestContext requestContext,
+                                          List<AiMessage> messageContext,
+                                          boolean persistExchange,
+                                          ChatRunOptions options,
+                                          StreamEventSink sink) {
+        ChatRunOptions runOptions = options == null ? defaultRunOptions() : options;
+        long startedAt = System.currentTimeMillis();
         String userPrompt = buildUserPrompt(messageContext);
         String latestQuestion = latestUserQuestion(request);
         String sessionId = request == null ? null : request.getSessionId();
@@ -181,60 +244,86 @@ public class AiChatService {
                 requestContext.getRequestId(), requestContext.getUserId(), requestContext.getUsername(),
                 requestContext.getAccount(), sessionId, abbreviate(latestQuestion));
 
-        List<ToolCallResult> toolResults = executeFallback(latestQuestion);
-        String reply = null;
-        String finishReason = "model_answer";
-        boolean streamedReply = false;
-        if (toolResults.isEmpty()) {
-            toolExecutionRecorder.start();
-            try {
-                reply = callModelStream(userPrompt, delta -> sendDelta(sink, delta));
-                streamedReply = true;
-            } catch (RuntimeException ex) {
-                throw downstreamException(ex);
-            } finally {
-                toolResults = toolExecutionRecorder.finish();
-            }
+        AtomicBoolean streamedReply = new AtomicBoolean(false);
+        AgentOrchestrator.AgentRunResult agentRun;
+        try {
+            agentRun = agentOrchestrator.run(latestQuestion, () -> callModelStream(userPrompt, systemPrompt(runOptions), delta -> {
+                streamedReply.set(true);
+                sendDelta(sink, delta);
+            }), runOptions.semanticFallbackEnabled());
+        } catch (RuntimeException ex) {
+            throw downstreamException(ex);
         }
+        List<ToolCallResult> toolResults = agentRun.toolResults();
+        String reply = agentRun.reply();
+        String finishReason = agentRun.outcome() == AgentOrchestrator.AgentOutcome.MODEL_ONLY
+                ? "model_answer"
+                : "tool_observed";
+        log.info("ai agent stream completed requestId={} userId={} sessionId={} outcome={} actions={} steps={}",
+                requestContext.getRequestId(), requestContext.getUserId(), sessionId,
+                agentRun.outcome(), agentRun.actionsUsed(), agentRun.describeSteps());
 
-        String exportUrl = buildCsvDownloadUrl(toolResults, requestContext);
         List<ToolCallResult> responseToolResults = toolResultCompressor.forAnswer(toolResults);
+        String exportUrl = runOptions.exposeToolPayload()
+                ? buildCsvDownloadUrl(responseToolResults, requestContext)
+                : "";
         if (!responseToolResults.isEmpty()) {
             if (!hasAnyToolData(responseToolResults)) {
                 finishReason = "tool_no_result";
-                reply = noToolResultReply(responseToolResults);
-                streamedReply = false;
+                reply = noToolResultReply(responseToolResults, runOptions);
             } else {
+                streamedReply.set(false);
+                StringBuilder streamedSummary = new StringBuilder();
                 try {
                     reply = summarizeToolResultsStream(
                             latestQuestion,
                             responseToolResults,
                             exportUrl,
-                            delta -> sendDelta(sink, delta));
+                            runOptions,
+                            delta -> {
+                                if (StringUtils.hasLength(delta)) {
+                                    streamedSummary.append(delta);
+                                    streamedReply.set(true);
+                                    sendDelta(sink, delta);
+                                }
+                            });
                     finishReason = "tool_summarized";
-                    streamedReply = true;
                 } catch (RuntimeException ex) {
-                    log.warn("ai summarize stream failed, fallback to deterministic tool summary requestId={} userId={} sessionId={} message={}",
-                            requestContext.getRequestId(), requestContext.getUserId(), sessionId, ex.getMessage(), ex);
-                    reply = fallbackToolReply(responseToolResults, exportUrl);
-                    finishReason = "tool_summary_fallback";
-                    streamedReply = false;
+                    if (streamedSummary.length() > 0) {
+                        log.warn("ai summarize stream interrupted requestId={} userId={} sessionId={} emittedChars={} message={}",
+                                requestContext.getRequestId(), requestContext.getUserId(), sessionId,
+                                streamedSummary.length(), ex.getMessage());
+                        reply = streamedSummary.toString();
+                        finishReason = "tool_summary_stream_interrupted";
+                    } else {
+                        log.warn("ai summarize failed in stream request, fallback to deterministic tool summary requestId={} userId={} sessionId={} message={}",
+                            requestContext.getRequestId(), requestContext.getUserId(), sessionId, ex.getMessage());
+                        reply = runOptions.exposeToolPayload()
+                                ? fallbackToolReply(responseToolResults, exportUrl)
+                                : fallbackShowModelToolReply(responseToolResults);
+                        finishReason = "tool_summary_fallback";
+                    }
                 }
             }
         }
-        reply = limitReplyLength(reply, exportUrl);
+        reply = limitReplyLength(reply, exportUrl, runOptions);
         reply = sanitizeUserFacingReply(reply);
-        if (!streamedReply) {
-            sendDelta(sink, reply);
+        if (!streamedReply.get()) {
+            sendDeltaChunked(sink, reply);
         }
 
         AiChatResponse response = new AiChatResponse(reply, "deepseek", model);
         response.setId(UUID.randomUUID().toString());
         response.setFinishReason(finishReason);
-        response.setToolResults(responseToolResults);
-        enrichToolPayload(response, toolResults, exportUrl);
+        List<ToolCallResult> metadataToolResults = runOptions.exposeToolPayload()
+                ? responseToolResults
+                : List.of();
+        response.setToolResults(metadataToolResults);
+        if (runOptions.exposeToolPayload()) {
+            enrichToolPayload(response, responseToolResults, exportUrl);
+        }
 
-        if (request != null) {
+        if (persistExchange && request != null) {
             sessionManager.appendExchange(
                     request.getSessionId(),
                     request.getMessages(),
@@ -248,6 +337,7 @@ public class AiChatService {
         log.info("ai chat stream completed requestId={} userId={} sessionId={} finishReason={} toolCalls={} tools={} exportUrl={} costMs={}",
                 requestContext.getRequestId(), requestContext.getUserId(), sessionId, finishReason,
                 toolResults.size(), toolNames(toolResults), exportUrl, System.currentTimeMillis() - startedAt);
+        return response;
     }
 
     private String sanitizeUserFacingReply(String reply) {
@@ -261,17 +351,8 @@ public class AiChatService {
                 .replaceAll("/(?:api/)?ai/exports/[a-zA-Z0-9_-]+", "完整明细可点击下载完整结果");
     }
 
-    private List<ToolCallResult> executeFallback(String latestQuestion) {
-        List<ToolCallResult> fallbackResults;
-        toolExecutionRecorder.start();
-        try {
-            toolFallbackService.tryExecute(latestQuestion);
-        } catch (RuntimeException ex) {
-            throw downstreamException(ex);
-        } finally {
-            fallbackResults = toolExecutionRecorder.finish();
-        }
-        return fallbackResults;
+    private ChatRunOptions defaultRunOptions() {
+        return ChatRunOptions.defaults(runtimeProperties.isSemanticFallbackEnabled());
     }
 
     private String callModel(String userPrompt) {
@@ -279,17 +360,19 @@ public class AiChatService {
                 .prompt()
                 .system(promptProperties.getSystemPrompt())
                 .user(userPrompt)
-                .tools(tcmGraphTools)
                 .call()
                 .content());
     }
 
     private String callModelStream(String userPrompt, Consumer<String> onDelta) {
+        return callModelStream(userPrompt, promptProperties.getSystemPrompt(), onDelta);
+    }
+
+    private String callModelStream(String userPrompt, String systemPrompt, Consumer<String> onDelta) {
         return executeModelStream("chat-stream", () -> chatClientBuilder.build()
                 .prompt()
-                .system(promptProperties.getSystemPrompt())
+                .system(systemPrompt)
                 .user(userPrompt)
-                .tools(tcmGraphTools)
                 .stream()
                 .content(), onDelta);
     }
@@ -313,6 +396,7 @@ public class AiChatService {
     private String summarizeToolResultsStream(String question,
                                               List<ToolCallResult> toolResults,
                                               String csvDownloadUrl,
+                                              ChatRunOptions options,
                                               Consumer<String> onDelta) {
         String json;
         try {
@@ -320,10 +404,10 @@ public class AiChatService {
         } catch (JsonProcessingException e) {
             json = String.valueOf(toolResults);
         }
-        String prompt = summaryPrompt(question, json, csvDownloadUrl);
+        String prompt = summaryPrompt(question, json, csvDownloadUrl, options);
         return executeModelStream("summarize-tools-stream", () -> chatClientBuilder.build()
                 .prompt()
-                .system(promptProperties.getSystemPrompt())
+                .system(systemPrompt(options))
                 .user(prompt)
                 .stream()
                 .content(), onDelta);
@@ -369,6 +453,72 @@ public class AiChatService {
             }
         }
         return null;
+    }
+
+    private String fallbackShowModelToolReply(List<ToolCallResult> toolResults) {
+        ToolCallResult visibleResult = firstResultWithData(toolResults);
+        if (visibleResult == null || visibleResult.getResult() == null) {
+            return "\u5f53\u524d\u6ca1\u6709\u68c0\u7d22\u5230\u76f4\u63a5\u5339\u914d\u7684\u7ed3\u6784\u5316\u8d44\u6599\uff0c\u53ef\u4ece\u901a\u7528\u4e2d\u533b\u836f\u77e5\u8bc6\u89d2\u5ea6\u8c28\u614e\u53c2\u8003\uff1b\u5177\u4f53\u7528\u836f\u4ecd\u9700\u4e13\u4e1a\u4e2d\u533b\u5e08\u8fa8\u8bc1\u3002";
+        }
+        List<Map<String, Object>> items = visibleResult.getResult().getItems();
+        int displayed = Math.min(items.size(), toolResultCompressor.getAnswerItemLimit());
+        int total = Math.max(visibleResult.getResult().getTotal(), items.size());
+        StringBuilder reply = new StringBuilder();
+        reply.append("\u6839\u636e\u68c0\u7d22\u7ed3\u679c\uff0c\u627e\u5230 ")
+                .append(total)
+                .append(" \u6761\u76f8\u5173\u4fe1\u606f\u3002");
+        reply.append("\n\n\u4ee3\u8868\u6027\u7ed3\u679c\uff1a");
+        for (int i = 0; i < displayed; i++) {
+            reply.append("\n").append(i + 1).append(". ").append(formatShowModelItem(items.get(i)));
+        }
+        reply.append("\n\n\u5177\u4f53\u7528\u836f\u9700\u7531\u4e13\u4e1a\u4e2d\u533b\u5e08\u8fa8\u8bc1\u3002");
+        return reply.toString();
+    }
+
+    private String formatShowModelItem(Map<String, Object> item) {
+        if (item == null || item.isEmpty()) {
+            return "\u7ed3\u679c\u9879";
+        }
+        String preferred = FALLBACK_FIELD_PRIORITY.stream()
+                .filter(item::containsKey)
+                .map(field -> formatShowModelField(field, item.get(field)))
+                .filter(StringUtils::hasText)
+                .limit(3)
+                .collect(Collectors.joining("\uff1b"));
+        if (StringUtils.hasText(preferred)) {
+            return preferred;
+        }
+        String generic = item.entrySet().stream()
+                .filter(entry -> isReadableFallbackField(entry.getKey(), entry.getValue()))
+                .limit(3)
+                .map(entry -> formatShowModelField(entry.getKey(), entry.getValue()))
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("\uff1b"));
+        return StringUtils.hasText(generic) ? generic : "\u7ed3\u679c\u9879";
+    }
+
+    private String formatShowModelField(String field, Object value) {
+        String text = value == null ? "" : value.toString();
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        return showModelFieldLabel(field) + "\uff1a" + text;
+    }
+
+    private String showModelFieldLabel(String field) {
+        return switch (field) {
+            case "herb", "herbName" -> "\u4e2d\u836f";
+            case "prescription", "prescriptionName" -> "\u65b9\u5242";
+            case "disease" -> "\u75be\u75c5/\u75c5\u75c7";
+            case "compound" -> "\u5316\u5408\u7269";
+            case "target" -> "\u9776\u70b9";
+            case "formula" -> "\u5206\u5b50\u5f0f";
+            case "symptom" -> "\u75c7\u72b6";
+            case "syndrome" -> "\u8bc1\u5019";
+            case "pathway" -> "\u901a\u8def";
+            case "evidenceType" -> "\u8bc1\u636e";
+            default -> field;
+        };
     }
 
     private String formatFallbackItem(Map<String, Object> item) {
@@ -424,6 +574,13 @@ public class AiChatService {
             case "inchikey" -> "InChIKey";
             default -> field;
         };
+    }
+
+    private String noToolResultReply(List<ToolCallResult> toolResults, ChatRunOptions options) {
+        if (options != null && StringUtils.hasText(options.noToolResultMessage())) {
+            return options.noToolResultMessage();
+        }
+        return noToolResultReply(toolResults);
     }
 
     private String noToolResultReply(List<ToolCallResult> toolResults) {
@@ -533,6 +690,17 @@ public class AiChatService {
         }
     }
 
+    private void sendDeltaChunked(StreamEventSink sink, String text) {
+        if (sink == null || !StringUtils.hasLength(text)) {
+            return;
+        }
+        int chunkSize = 80;
+        for (int start = 0; start < text.length(); start += chunkSize) {
+            int end = Math.min(text.length(), start + chunkSize);
+            sendDelta(sink, text.substring(start, end));
+        }
+    }
+
     private String executeModelStream(String operation, Supplier<Flux<String>> supplier, Consumer<String> onDelta) {
         int attempts = Math.max(1, runtimeProperties.getMaxRetries() + 1);
         RuntimeException lastError = null;
@@ -613,7 +781,9 @@ public class AiChatService {
         if (timeout == null || timeout.isZero() || timeout.isNegative()) {
             return supplier.get();
         }
-        CompletableFuture<String> future = CompletableFuture.supplyAsync(supplier, aiModelExecutor);
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(
+                toolExecutionRecorder.propagate(supplier),
+                aiModelExecutor);
         try {
             return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException ex) {
@@ -645,9 +815,22 @@ public class AiChatService {
         }
     }
 
+    private String systemPrompt(ChatRunOptions options) {
+        if (options != null && StringUtils.hasText(options.systemPrompt())) {
+            return options.systemPrompt();
+        }
+        return promptProperties.getSystemPrompt();
+    }
+
     private String summaryPrompt(String question, String toolResultJson, String csvDownloadUrl) {
+        return summaryPrompt(question, toolResultJson, csvDownloadUrl, ChatRunOptions.defaults());
+    }
+
+    private String summaryPrompt(String question, String toolResultJson, String csvDownloadUrl, ChatRunOptions options) {
         int answerItemLimit = toolResultCompressor.getAnswerItemLimit();
-        String template = promptProperties.getSummaryPromptTemplate();
+        String template = options != null && StringUtils.hasText(options.summaryPromptTemplate())
+                ? options.summaryPromptTemplate()
+                : promptProperties.getSummaryPromptTemplate();
         if (!StringUtils.hasText(template)) {
             template = ""
                     + "用户问题：\n{question}\n\n"
@@ -675,6 +858,22 @@ public class AiChatService {
                         && toolResult.getResult() != null
                         && toolResult.getResult().getItems() != null
                         && !toolResult.getResult().getItems().isEmpty());
+    }
+
+    private String limitReplyLength(String reply, String csvDownloadUrl, ChatRunOptions options) {
+        if (options == null || options.exposeToolPayload()) {
+            return limitReplyLength(reply, csvDownloadUrl);
+        }
+        if (!StringUtils.hasText(reply)) {
+            return reply;
+        }
+        int maxChars = runtimeProperties.getMaxReplyChars();
+        if (maxChars <= 0 || reply.length() <= maxChars) {
+            return reply;
+        }
+        String suffix = "\n\n\u56de\u7b54\u8f83\u957f\uff0c\u5df2\u505a\u538b\u7f29\u5c55\u793a\u3002";
+        int end = Math.max(0, Math.min(reply.length(), maxChars - suffix.length()));
+        return reply.substring(0, end).trim() + suffix;
     }
 
     private String limitReplyLength(String reply, String csvDownloadUrl) {

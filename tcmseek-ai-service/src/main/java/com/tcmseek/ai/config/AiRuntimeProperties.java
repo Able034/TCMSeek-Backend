@@ -9,7 +9,7 @@ public class AiRuntimeProperties {
 
     private Duration requestTimeout = Duration.ofSeconds(60);
 
-    private int maxRetries = 1;
+    private int maxRetries = 0;
 
     private Duration retryBackoff = Duration.ofMillis(500);
 
@@ -18,6 +18,10 @@ public class AiRuntimeProperties {
     private int questionLogMaxLength = 120;
 
     private int maxReplyChars = 4000;
+
+    private int agentMaxSteps = 2;
+
+    private boolean semanticFallbackEnabled = false;
 
     public Duration getRequestTimeout() {
         return requestTimeout;
@@ -65,5 +69,21 @@ public class AiRuntimeProperties {
 
     public void setMaxReplyChars(int maxReplyChars) {
         this.maxReplyChars = maxReplyChars;
+    }
+
+    public int getAgentMaxSteps() {
+        return agentMaxSteps;
+    }
+
+    public void setAgentMaxSteps(int agentMaxSteps) {
+        this.agentMaxSteps = agentMaxSteps;
+    }
+
+    public boolean isSemanticFallbackEnabled() {
+        return semanticFallbackEnabled;
+    }
+
+    public void setSemanticFallbackEnabled(boolean semanticFallbackEnabled) {
+        this.semanticFallbackEnabled = semanticFallbackEnabled;
     }
 }

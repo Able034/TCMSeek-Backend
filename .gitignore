@@ -119,3 +119,8 @@ tcmseek-web-server/tcmseek-admin/docs/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Python runtime caches
+__pycache__/
+*.py[cod]
+*.pyc.*

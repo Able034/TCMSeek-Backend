@@ -76,6 +76,9 @@ public class CsvExportStore {
         if ("herb_compounds".equals(queryType)) {
             return buildHerbCompoundsExport(toolResult);
         }
+        if ("herb_compound_targets".equals(queryType)) {
+            return buildHerbCompoundTargetsExport(toolResult);
+        }
         if ("prescription_herbs".equals(queryType)) {
             return buildPrescriptionHerbsExport(toolResult);
         }
@@ -150,6 +153,24 @@ public class CsvExportStore {
                     asString(item.get("formula"))));
         }
         return new ExportRecord("herb-compounds.csv", Arrays.asList("herb_name", "compound", "inchikey", "formula"), rows);
+    }
+
+    private ExportRecord buildHerbCompoundTargetsExport(ToolCallResult toolResult) {
+        String herbName = asString(toolResult.getArguments().get("herbName"));
+        List<List<String>> rows = new ArrayList<>();
+        for (Map<String, Object> item : toolResult.getResult().getItems()) {
+            rows.add(Arrays.asList(
+                    herbName,
+                    asString(item.get("compound")),
+                    asString(item.get("inchikey")),
+                    asString(item.get("formula")),
+                    asString(item.get("target")),
+                    asString(item.get("targetId"))));
+        }
+        return new ExportRecord(
+                "herb-compound-targets.csv",
+                Arrays.asList("herb_name", "compound", "inchikey", "formula", "target", "target_id"),
+                rows);
     }
 
     private ExportRecord buildPrescriptionHerbsExport(ToolCallResult toolResult) {

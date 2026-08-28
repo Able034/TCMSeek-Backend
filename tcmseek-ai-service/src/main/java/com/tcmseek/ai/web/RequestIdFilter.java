@@ -19,6 +19,14 @@ public class RequestIdFilter extends OncePerRequestFilter {
 
     private static final String MDC_KEY = "requestId";
 
+    /**
+     * 请求处理过滤器，增加请求id、传递X-Request-Id
+     * @param request
+     * @param response
+     * @param filterChain
+     * @throws ServletException
+     * @throws IOException
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
